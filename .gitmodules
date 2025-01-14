@@ -1,0 +1,6 @@
+[submodule "libnx"]
+	path = subprojects/libnx
+	url = git@github.com:LNSD/libnx.git
+[submodule "subprojects/examples"]
+	path = subprojects/examples
+	url = https://github.com/switchbrew/switch-examples.git

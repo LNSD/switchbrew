@@ -1,0 +1,33 @@
+[constants]
+dkp = '/opt/devkitpro'
+
+[built-in options]
+c_args = ['-march=armv8-a+crc+crypto', '-mtune=cortex-a57', '-mtp=soft', '-fPIE']
+cpp_args = c_args + ['-fno-rtti', '-fno-exceptions']
+
+[host_machine]
+system = 'horizon'
+cpu_family = 'aarch64'
+cpu = 'cortex-a57'
+endian = 'little'
+
+[binaries]
+c = dkp + '/devkitA64/bin/aarch64-none-elf-gcc'
+cpp = dkp + '/devkitA64/bin/aarch64-none-elf-g++'
+ar = dkp + '/devkitA64/bin/aarch64-none-elf-ar'
+nm = dkp + '/devkitA64/bin/aarch64-none-elf-nm'
+strip = dkp + '/devkitA64/bin/aarch64-none-elf-strip'
+pkg-config = dkp + '/portlibs/switch/bin/aarch64-none-elf-pkg-config'
+cmake = dkp + '/portlibs/switch/bin/aarch64-none-elf-cmake'
+
+# devkitpro tools
+bin2s = dkp + '/tools/bin/bin2s'
+build_pfs0 = dkp + '/tools/bin/build_pfs0'
+elf2nro = dkp + '/tools/bin/elf2nro'
+elf2nso = dkp + '/tools/bin/elf2nso'
+nacptool = dkp + '/tools/bin/nacptool'
+npdmtool = dkp + '/tools/bin/npdmtool'
+uam = dkp + '/tools/bin/uam'
+
+# Project scripts
+bundle = '@GLOBAL_SOURCE_ROOT@/scripts/bundle.sh'
