@@ -3,4 +3,4 @@
 	url = git@github.com:LNSD/libnx.git
 [submodule "subprojects/examples"]
 	path = subprojects/examples
-	url = https://github.com/switchbrew/switch-examples.git
+	url = git@github.com:LNSD/switch-examples.git
