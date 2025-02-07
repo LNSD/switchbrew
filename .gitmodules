@@ -4,3 +4,6 @@
 [submodule "subprojects/examples"]
 	path = subprojects/examples
 	url = git@github.com:LNSD/switch-examples.git
+[submodule "subprojects/nx-hbmenu"]
+	path = subprojects/nx-hbmenu
+	url = git@github.com:LNSD/nx-hbmenu.git
