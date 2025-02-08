@@ -1,0 +1,25 @@
+[constants]
+dkp = '/opt/devkitpro'
+
+[properties]
+# Directory containing 'bin', 'lib', etc for the toolchain and system libraries
+sys_root = dkp + '/devkitA64/aarch64-none-elf/'
+
+[binaries]
+# Toolchain
+c = dkp + '/devkitA64/bin/aarch64-none-elf-gcc'
+cpp = dkp + '/devkitA64/bin/aarch64-none-elf-g++'
+ar = dkp + '/devkitA64/bin/aarch64-none-elf-ar'
+nm = dkp + '/devkitA64/bin/aarch64-none-elf-nm'
+strip = dkp + '/devkitA64/bin/aarch64-none-elf-strip'
+pkg-config = dkp + '/portlibs/switch/bin/aarch64-none-elf-pkg-config'
+cmake = dkp + '/portlibs/switch/bin/aarch64-none-elf-cmake'
+
+# Switch tools
+bin2s = dkp + '/tools/bin/bin2s'
+build_pfs0 = dkp + '/tools/bin/build_pfs0'
+elf2nro = dkp + '/tools/bin/elf2nro'
+elf2nso = dkp + '/tools/bin/elf2nso'
+nacptool = dkp + '/tools/bin/nacptool'
+npdmtool = dkp + '/tools/bin/npdmtool'
+uam = dkp + '/tools/bin/uam'
