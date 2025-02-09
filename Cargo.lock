@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "nx-arm"
+name = "nx-cpu"
 version = "0.1.0"
 dependencies = [
  "panic-abort",

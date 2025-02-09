@@ -1,10 +1,10 @@
 [package]
-name = "nx-arm"
+name = "nx-cpu"
 version = "0.1.0"
 edition = "2024"
 
 [lib]
-name = "nx_arm"
+name = "nx_cpu"
 crate-type = ["staticlib"]
 test = false
 doctest = false

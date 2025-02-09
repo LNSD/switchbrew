@@ -1,4 +1,4 @@
-project('nx-arm', version : '0.1.0')
+project('nx-cpu', version : '0.1.0')
 
 cargo = find_program('cargo', required : true)
 
@@ -7,8 +7,8 @@ cargo = find_program('cargo', required : true)
 inc = include_directories('include')
 
 # Target
-nx_arm_tgt = custom_target(
-    'nx-arm',
+nx_cpu_tgt = custom_target(
+    'nx-cpu',
     command : [
         cargo, 'build',
         '--package', meson.project_name(),
@@ -16,11 +16,11 @@ nx_arm_tgt = custom_target(
         '--target-dir', '@PRIVATE_DIR@',
         '--artifact-dir', '@OUTDIR@',
     ],
-    output : 'libnx_arm.a',
+    output : 'libnx_cpu.a',
     build_by_default : true,
 )
 
-nx_arm_dep = declare_dependency(
+nx_cpu_dep = declare_dependency(
     include_directories : inc,
-    link_with : nx_arm_tgt[0],
+    link_with : nx_cpu_tgt[0],
 )

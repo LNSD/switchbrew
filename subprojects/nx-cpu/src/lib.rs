@@ -1,5 +1,6 @@
-//! # nx-arm
+//! # nx-cpu
 //!
+//! A Rust library for interacting with the Nintendo Switch's ARM Cortex-A57 (aarch64) CPU.
 
 #![no_std]
 
