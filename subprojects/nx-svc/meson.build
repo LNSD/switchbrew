@@ -1,4 +1,4 @@
-project('nx-svc', 'c', version : '0.1.0')
+project('nx-svc', version : '0.1.0')
 
 cargo = find_program('cargo', required : true)
 
@@ -11,7 +11,7 @@ nx_svc_build = custom_target(
     'nx-svc',
     command : [cargo, 'build', '--release', '--target-dir', '@PRIVATE_DIR@', '--artifact-dir', '@OUTDIR@'],
     output : 'libnx_svc.a',
-    build_always : true,
+    build_by_default : true,
 )
 
 nx_svc_dep = declare_dependency(
