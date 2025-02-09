@@ -7,14 +7,20 @@ cargo = find_program('cargo', required : true)
 inc = include_directories('include')
 
 # Target
-nx_svc_build = custom_target(
+nx_svc_tgt = custom_target(
     'nx-svc',
-    command : [cargo, 'build', '--release', '--target-dir', '@PRIVATE_DIR@', '--artifact-dir', '@OUTDIR@'],
+    command : [
+        cargo, 'build',
+        '--package', meson.project_name(),
+        '--profile', get_option('buildtype') == 'release' ? 'release' : 'dev',
+        '--target-dir', '@PRIVATE_DIR@',
+        '--artifact-dir', '@OUTDIR@',
+    ],
     output : 'libnx_svc.a',
     build_by_default : true,
 )
 
 nx_svc_dep = declare_dependency(
     include_directories : inc,
-    link_with : nx_svc_build[0],
+    link_with : nx_svc_tgt[0],
 )

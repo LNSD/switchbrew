@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "libnx-svc"
+name = "nx-svc"
 version = "0.1.0"
 dependencies = [
  "panic-abort",
