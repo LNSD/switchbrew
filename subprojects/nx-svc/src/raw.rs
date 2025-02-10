@@ -300,19 +300,21 @@ pub struct SecmonArgs {
 /// | IN | _size_ | Size of the heap, must be a multiple of 0x200000 and [2.0.0+] less than 0x18000000. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetHeapSize>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_set_heap_size(out_addr: *mut *mut c_void, size: usize) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 (out_addr) on the stack
-        "svc 0x1",             // Issue the SVC call with immediate value 0x1
-        "ldr x2, [sp], #16",   // Load x2 (out_addr pointer) from the stack
-        "str x1, [x2]",        // Store x1 in the memory pointed to by x2
-        in("x0") out_addr,     // Input: out_addr in register x0
-        in("x1") size,         // Input: size in register x1
-        lateout("w0") result,  // Output: Capture result from x0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 (out_addr) on the stack
+            "svc 0x1",             // Issue the SVC call with immediate value 0x1
+            "ldr x2, [sp], #16",   // Load x2 (out_addr pointer) from the stack
+            "str x1, [x2]",        // Store x1 in the memory pointed to by x2
+            in("x0") out_addr,     // Input: out_addr in register x0
+            in("x1") size,         // Input: size in register x1
+            lateout("w0") result,  // Output: Capture result from x0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -329,21 +331,23 @@ pub unsafe extern "C" fn __nx_svc_set_heap_size(out_addr: *mut *mut c_void, size
 /// | IN | _perm_ | Permissions (see [MemoryPermission]). |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetMemoryPermission>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_set_memory_permission(
     addr: *mut c_void,
     size: usize,
     perm: u32, // TODO: MemoryPermission bitfield
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x2",            // Issue the SVC call with immediate value 0x2
-        in("x0") addr,        // Input: addr in register x0
-        in("x1") size,        // Input: size in register x1
-        in("x2") perm,        // Input: perm in register x2
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x2",            // Issue the SVC call with immediate value 0x2
+            in("x0") addr,        // Input: addr in register x0
+            in("x1") size,        // Input: size in register x1
+            in("x2") perm,        // Input: perm in register x2
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -361,7 +365,7 @@ pub unsafe extern "C" fn __nx_svc_set_memory_permission(
 /// | IN | _attr_ | New attributes. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetMemoryAttribute>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_set_memory_attribute(
     addr: *mut c_void,
     size: usize,
@@ -369,15 +373,17 @@ pub unsafe extern "C" fn __nx_svc_set_memory_attribute(
     attr: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x3",            // Issue the SVC call with immediate value 0x3
-        in("x0") addr,        // Input: addr in register x0
-        in("x1") size,        // Input: size in register x1
-        in("x2") mask,        // Input: mask in register x2
-        in("x3") attr,        // Input: attr in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x3",            // Issue the SVC call with immediate value 0x3
+            in("x0") addr,        // Input: addr in register x0
+            in("x1") size,        // Input: size in register x1
+            in("x2") mask,        // Input: mask in register x2
+            in("x3") attr,        // Input: attr in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -397,21 +403,23 @@ pub unsafe extern "C" fn __nx_svc_set_memory_attribute(
 /// | IN | _size_ | Size of the range. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_map_memory(
     dst_addr: *mut c_void,
     src_addr: *mut c_void,
     size: usize,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x4",            // Issue the SVC call with immediate value 0x4
-        in("x0") dst_addr,    // Input: addr in register x0
-        in("x1") src_addr,    // Input: addr in register x1
-        in("x2") size,        // Input: size in register x2
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x4",            // Issue the SVC call with immediate value 0x4
+            in("x0") dst_addr,    // Input: addr in register x0
+            in("x1") src_addr,    // Input: addr in register x1
+            in("x2") size,        // Input: size in register x2
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -428,21 +436,23 @@ pub unsafe extern "C" fn __nx_svc_map_memory(
 /// | IN | _size_ | Size of the range. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_unmap_memory(
     dst_addr: *mut c_void,
     src_addr: *mut c_void,
     size: usize,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x5",            // Issue the SVC call with immediate value 0x5
-        in("x0") dst_addr,    // Input: addr in register x0
-        in("x1") src_addr,    // Input: addr in register x1
-        in("x2") size,        // Input: size in register x2
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x5",            // Issue the SVC call with immediate value 0x5
+            in("x0") dst_addr,    // Input: addr in register x0
+            in("x1") src_addr,    // Input: addr in register x1
+            in("x2") size,        // Input: size in register x2
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -460,24 +470,26 @@ pub unsafe extern "C" fn __nx_svc_unmap_memory(
 /// | IN  | _addr_ | Address to query.
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#QueryMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_query_memory(
     meminfo: *mut MemoryInfo,
     pageinfo: *mut u32,
     addr: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x1, [sp, #-16]!", // Store x1 on the stack
-        "svc 0x6",             // Issue the SVC call with immediate value 0x6
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") meminfo,      // Input: meminfo in register x0
-        in("x1") pageinfo,     // Input: pageinfo in register x1
-        in("x2") addr,         // Input: addr in register x2
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x1, [sp, #-16]!", // Store x1 on the stack
+            "svc 0x6",             // Issue the SVC call with immediate value 0x6
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") meminfo,      // Input: meminfo in register x0
+            in("x1") pageinfo,     // Input: pageinfo in register x1
+            in("x2") addr,         // Input: addr in register x2
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -492,12 +504,14 @@ pub unsafe extern "C" fn __nx_svc_query_memory(
 /// Syscall code: [EXIT_PROCESS](crate::code::EXIT_PROCESS) (`0x7`).
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ExitProcess>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_exit_process() -> ! {
-    asm!(
-        "svc 0x7",         // Issue the SVC call with immediate value 0x7
-        options(noreturn)  // Never returns, and its return type is defined as ! (never).
-    )
+    unsafe {
+        asm!(
+            "svc 0x7",         // Issue the SVC call with immediate value 0x7
+            options(noreturn)  // Never returns, and its return type is defined as ! (never).
+        )
+    }
 }
 
 /// Creates a thread.
@@ -516,7 +530,7 @@ pub unsafe extern "C" fn __nx_svc_exit_process() -> ! {
 /// | IN | _cpuid_ | CPU core ID. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateThread>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_create_thread(
     handle: *mut Handle,
     entry: *mut c_void,
@@ -526,20 +540,22 @@ pub unsafe extern "C" fn __nx_svc_create_thread(
     cpuid: c_int,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 (handle pointer) on the stack
-        "svc 0x8",             // Issue the SVC call with immediate value 0x8
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 (thread handle) in the memory pointed to by x2
-        in("x0") handle,       // Input: handle in register x0
-        in("x1") entry,        // Input: entry in register x1
-        in("x2") arg,          // Input: arg in register x2
-        in("x3") stack_top,    // Input: stack_top in register x3
-        in("w4") prio,         // Input: prio in register w4
-        in("w5") cpuid,        // Input: cpuid in register w5
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 (handle pointer) on the stack
+            "svc 0x8",             // Issue the SVC call with immediate value 0x8
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 (thread handle) in the memory pointed to by x2
+            in("x0") handle,       // Input: handle in register x0
+            in("x1") entry,        // Input: entry in register x1
+            in("x2") arg,          // Input: arg in register x2
+            in("x3") stack_top,    // Input: stack_top in register x3
+            in("w4") prio,         // Input: prio in register w4
+            in("w5") cpuid,        // Input: cpuid in register w5
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -554,15 +570,17 @@ pub unsafe extern "C" fn __nx_svc_create_thread(
 /// | IN | _handle_ | Handle of the thread to start. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#StartThread>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_start_thread(handle: Handle) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x9",            // Issue the SVC call with immediate value 0x9
-        in("x0") handle,      // Input: handle in register x0
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x9",            // Issue the SVC call with immediate value 0x9
+            in("x0") handle,      // Input: handle in register x0
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -573,12 +591,14 @@ pub unsafe extern "C" fn __nx_svc_start_thread(handle: Handle) -> Result {
 /// Syscall code: [EXIT_THREAD](crate::code::EXIT_THREAD) (`0xA`).
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ExitThread>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_exit_thread() -> ! {
-    asm!(
-        "svc 0xA",         // Issue the SVC call with immediate value 0xA
-        options(noreturn)  // Never returns, and its return type is defined as ! (never).
-    )
+    unsafe {
+        asm!(
+            "svc 0xA",         // Issue the SVC call with immediate value 0xA
+            options(noreturn)  // Never returns, and its return type is defined as ! (never).
+        )
+    }
 }
 
 /// Sleeps the current thread for the specified amount of time.
@@ -594,13 +614,15 @@ pub unsafe extern "C" fn __nx_svc_exit_thread() -> ! {
 /// | IN | _nano_ | Number of nanoseconds to sleep, or [YieldType] for yield. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SleepThread>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_sleep_thread(nano: i64) {
-    asm!(
-        "svc 0xB",     // Issue the SVC call with immediate value 0xB
-        in("x0") nano, // Input: nano in register x0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0xB",     // Issue the SVC call with immediate value 0xB
+            in("x0") nano, // Input: nano in register x0
+            options(nostack)
+        );
+    }
 }
 
 /// Gets a thread's priority.
@@ -615,22 +637,24 @@ pub unsafe extern "C" fn __nx_svc_sleep_thread(nano: i64) {
 /// | IN | _handle_ | Handle of the thread to query. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetThreadPriority>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_thread_priority(
     priority: *mut i32,
     handle: Handle,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0xC",             // Issue the SVC call with immediate value 0xC
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") priority,     // Input: priority in register x0
-        in("x1") handle,       // Input: handle in register x1
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0xC",             // Issue the SVC call with immediate value 0xC
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") priority,     // Input: priority in register x0
+            in("x1") handle,       // Input: handle in register x1
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -648,16 +672,18 @@ pub unsafe extern "C" fn __nx_svc_get_thread_priority(
 /// | IN | _priority_ | New priority. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetThreadPriority>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_set_thread_priority(handle: Handle, priority: u32) -> Result {
     let result: Result;
-    asm!(
-        "svc 0xD",            // Issue the SVC call with immediate value 0xD
-        in("x0") handle,      // Input: handle in register x0
-        in("x1") priority,    // Input: priority in register x1
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0xD",            // Issue the SVC call with immediate value 0xD
+            in("x0") handle,      // Input: handle in register x0
+            in("x1") priority,    // Input: priority in register x1
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -674,25 +700,27 @@ pub unsafe extern "C" fn __nx_svc_set_thread_priority(handle: Handle, priority: 
 /// | IN | _handle_ | Handle of the thread to query. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetThreadCoreMask>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_thread_core_mask(
     core_id: *mut i32,
     affinity_mask: *mut u64,
     handle: Handle,
 ) -> Result {
     let result: Result;
-    asm!(
-        "stp x0, x1, [sp, #-16]!", // Store x0 and x1 on the stack
-        "svc 0xE",                 // Issue the SVC call with immediate value 0xE
-        "ldp x3, x4, [sp], #16",   // Load x3 and x4 from the stack
-        "str w1, [x3]",            // Store w1 in the memory pointed to by x3
-        "str x2, [x4]",            // Store x2 in the memory pointed to by x4
-        in("x0") core_id,          // Input: core_id in register x0
-        in("x1") affinity_mask,    // Input: affinity_mask in register x1
-        in("x2") handle,           // Input: handle in register x2
-        lateout("w0") result,      // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "stp x0, x1, [sp, #-16]!", // Store x0 and x1 on the stack
+            "svc 0xE",                 // Issue the SVC call with immediate value 0xE
+            "ldp x3, x4, [sp], #16",   // Load x3 and x4 from the stack
+            "str w1, [x3]",            // Store w1 in the memory pointed to by x3
+            "str x2, [x4]",            // Store x2 in the memory pointed to by x4
+            in("x0") core_id,          // Input: core_id in register x0
+            in("x1") affinity_mask,    // Input: affinity_mask in register x1
+            in("x2") handle,           // Input: handle in register x2
+            lateout("w0") result,      // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -709,21 +737,23 @@ pub unsafe extern "C" fn __nx_svc_get_thread_core_mask(
 /// | IN | _affinity_mask_ | New affinity mask. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetThreadCoreMask>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_set_thread_core_mask(
     handle: Handle,
     core_id: i32,
     affinity_mask: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0xF",              // Issue the SVC call with immediate value 0xF
-        in("x0") handle,        // Input: handle in register x0
-        in("x1") core_id,       // Input: core_id in register x1
-        in("x2") affinity_mask, // Input: affinity_mask in register x2
-        lateout("w0") result,   // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0xF",              // Issue the SVC call with immediate value 0xF
+            in("x0") handle,        // Input: handle in register x0
+            in("x1") core_id,       // Input: core_id in register x1
+            in("x2") affinity_mask, // Input: affinity_mask in register x2
+            lateout("w0") result,   // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -736,14 +766,16 @@ pub unsafe extern "C" fn __nx_svc_set_thread_core_mask(
 /// Syscall code: [GET_CURRENT_PROCESSOR_NUMBER](crate::code::GET_CURRENT_PROCESSOR_NUMBER) (`0x10`).
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetCurrentProcessorNumber>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_current_processor_number() -> Result {
     let result: Result;
-    asm!(
-        "svc 0x10",           // Issue the SVC call with immediate value 0x10
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x10",           // Issue the SVC call with immediate value 0x10
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -767,15 +799,17 @@ pub unsafe extern "C" fn __nx_svc_get_current_processor_number() -> Result {
 /// | IN | _handle_ | Handle of the event to signal. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SignalEvent>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_signal_event(handle: Handle) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x11",           // Issue the SVC call with immediate value 0x11
-        in("x0") handle,      // Input: handle in register x0
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x11",           // Issue the SVC call with immediate value 0x11
+            in("x0") handle,      // Input: handle in register x0
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -790,15 +824,17 @@ pub unsafe extern "C" fn __nx_svc_signal_event(handle: Handle) -> Result {
 /// | IN | _handle_ | Handle of the event to clear. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ClearEvent>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_clear_event(handle: Handle) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x12",           // Issue the SVC call with immediate value 0x12
-        in("x0") handle,      // Input: handle in register x0
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x12",           // Issue the SVC call with immediate value 0x12
+            in("x0") handle,      // Input: handle in register x0
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -820,7 +856,7 @@ pub unsafe extern "C" fn __nx_svc_clear_event(handle: Handle) -> Result {
 /// | IN | _perm_ | Permissions (see [MemoryPermission]). |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapSharedMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_map_shared_memory(
     handle: Handle,
     addr: *mut c_void,
@@ -828,15 +864,17 @@ pub unsafe extern "C" fn __nx_svc_map_shared_memory(
     perm: u32, // TODO: MemoryPermission bitfield
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x13",           // Issue the SVC call with immediate value 0x13
-        in("x0") handle,      // Input: handle in register x0
-        in("x1") addr,        // Input: addr in register x1
-        in("x2") size,        // Input: size in register x2
-        in("x3") perm,        // Input: perm in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x13",           // Issue the SVC call with immediate value 0x13
+            in("x0") handle,      // Input: handle in register x0
+            in("x1") addr,        // Input: addr in register x1
+            in("x2") size,        // Input: size in register x2
+            in("x3") perm,        // Input: perm in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -853,21 +891,23 @@ pub unsafe extern "C" fn __nx_svc_map_shared_memory(
 /// | IN | _size_ | Size of the block. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapSharedMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_unmap_shared_memory(
     handle: Handle,
     addr: *mut c_void,
     size: usize,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x14",           // Issue the SVC call with immediate value 0x14
-        in("x0") handle,      // Input: handle in register x0
-        in("x1") addr,        // Input: addr in register x1
-        in("x2") size,        // Input: size in register x2
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x14",           // Issue the SVC call with immediate value 0x14
+            in("x0") handle,      // Input: handle in register x0
+            in("x1") addr,        // Input: addr in register x1
+            in("x2") size,        // Input: size in register x2
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -885,7 +925,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_shared_memory(
 /// | IN | _perm_ | Permissions (see [MemoryPermission]). |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateTransferMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_create_transfer_memory(
     handle: *mut Handle,
     addr: *mut c_void,
@@ -893,18 +933,20 @@ pub unsafe extern "C" fn __nx_svc_create_transfer_memory(
     perm: u32, // TODO: MemoryPermission bitfield
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x15",            // Issue the SVC call with immediate value 0x15
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") handle,       // Input: handle in register x0
-        in("x1") addr,         // Input: addr in register x1
-        in("x2") size,         // Input: size in register x2
-        in("x3") perm,         // Input: perm in register x3
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x15",            // Issue the SVC call with immediate value 0x15
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") handle,       // Input: handle in register x0
+            in("x1") addr,         // Input: addr in register x1
+            in("x2") size,         // Input: size in register x2
+            in("x3") perm,         // Input: perm in register x3
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -923,15 +965,17 @@ pub unsafe extern "C" fn __nx_svc_create_transfer_memory(
 /// | IN | _handle_ | Handle to close. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CloseHandle>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_close_handle(handle: Handle) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x16",           // Issue the SVC call with immediate value 0x16
-        in("x0") handle,      // Input: handle in register x0
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x16",           // Issue the SVC call with immediate value 0x16
+            in("x0") handle,      // Input: handle in register x0
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -950,15 +994,17 @@ pub unsafe extern "C" fn __nx_svc_close_handle(handle: Handle) -> Result {
 /// | IN | _handle_ | Handle of the signal to reset. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ResetSignal>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_reset_signal(handle: Handle) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x17",           // Issue the SVC call with immediate value 0x17
-        in("x0") handle,      // Input: handle in register x0
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x17",           // Issue the SVC call with immediate value 0x17
+            in("x0") handle,      // Input: handle in register x0
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -984,7 +1030,7 @@ pub unsafe extern "C" fn __nx_svc_reset_signal(handle: Handle) -> Result {
 /// | IN | _timeout_ | Timeout in nanoseconds. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#WaitSynchronization>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_wait_synchronization(
     index: *mut i32,
     handles: *const u32,
@@ -992,18 +1038,20 @@ pub unsafe extern "C" fn __nx_svc_wait_synchronization(
     timeout: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x18",            // Issue the SVC call with immediate value 0x18
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") index,        // Input: index in register x0
-        in("x1") handles,      // Input: handles in register x1
-        in("x2") handle_count, // Input: handle_count in register x2
-        in("x3") timeout,      // Input: timeout in register x3
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x18",            // Issue the SVC call with immediate value 0x18
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") index,        // Input: index in register x0
+            in("x1") handles,      // Input: handles in register x1
+            in("x2") handle_count, // Input: handle_count in register x2
+            in("x3") timeout,      // Input: timeout in register x3
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1024,15 +1072,17 @@ pub unsafe extern "C" fn __nx_svc_wait_synchronization(
 /// | IN | _handle_ | Handle to the thread to wait for. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CancelSynchronization>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_cancel_synchronization(handle: Handle) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x19",           // Issue the SVC call with immediate value 0x19
-        in("x0") handle,      // Input: handle in register x0
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x19",           // Issue the SVC call with immediate value 0x19
+            in("x0") handle,      // Input: handle in register x0
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1049,21 +1099,23 @@ pub unsafe extern "C" fn __nx_svc_cancel_synchronization(handle: Handle) -> Resu
 /// | IN | _self_tag_ | Tag to use for self. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ArbitrateLock>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_arbitrate_lock(
     wait_tag: u32,
     tag_location: *mut u32,
     self_tag: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x1A",            // Issue the SVC call with immediate value 0x1A
-        in("x0") wait_tag,     // Input: wait_tag in register x0
-        in("x1") tag_location, // Input: tag_location in register x1
-        in("x2") self_tag,     // Input: self_tag in register x2
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x1A",            // Issue the SVC call with immediate value 0x1A
+            in("x0") wait_tag,     // Input: wait_tag in register x0
+            in("x1") tag_location, // Input: tag_location in register x1
+            in("x2") self_tag,     // Input: self_tag in register x2
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1079,15 +1131,17 @@ pub unsafe extern "C" fn __nx_svc_arbitrate_lock(
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ArbitrateUnlock>
 /// Arbitrates a mutex unlock operation in userspace.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_arbitrate_unlock(tag_location: *mut u32) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x1B",            // Issue the SVC call with immediate value 0x1B
-        in("x0") tag_location, // Input: tag_location in register x0
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x1B",            // Issue the SVC call with immediate value 0x1B
+            in("x0") tag_location, // Input: tag_location in register x0
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1105,7 +1159,7 @@ pub unsafe extern "C" fn __nx_svc_arbitrate_unlock(tag_location: *mut u32) -> Re
 /// | IN | _timeout_ns_ | Timeout in nanoseconds. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#WaitProcessWideKeyAtomic>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_wait_process_wide_key_atomic(
     address: *mut u32,
     cv_key: *mut u32,
@@ -1113,15 +1167,17 @@ pub unsafe extern "C" fn __nx_svc_wait_process_wide_key_atomic(
     timeout_ns: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x1C",           // Issue the SVC call with immediate value 0x1C
-        in("x0") address,     // Input: address in register x0
-        in("x1") cv_key,      // Input: cv_key in register x1
-        in("x2") tag,         // Input: tag in register x2
-        in("x3") timeout_ns,  // Input: timeout_ns in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x1C",           // Issue the SVC call with immediate value 0x1C
+            in("x0") address,     // Input: address in register x0
+            in("x1") cv_key,      // Input: cv_key in register x1
+            in("x2") tag,         // Input: tag in register x2
+            in("x3") timeout_ns,  // Input: timeout_ns in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1137,14 +1193,16 @@ pub unsafe extern "C" fn __nx_svc_wait_process_wide_key_atomic(
 /// | IN | _count_ | Number of threads to wake up. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SignalProcessWideKey>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_signal_process_wide_key(cv_key: *mut u32, count: i32) {
-    asm!(
-        "svc 0x1D",      // Issue the SVC call with immediate value 0x1D
-        in("x0") cv_key, // Input: cv_key in register x0
-        in("x1") count,  // Input: count in register x1
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x1D",      // Issue the SVC call with immediate value 0x1D
+            in("x0") cv_key, // Input: cv_key in register x0
+            in("x1") count,  // Input: count in register x1
+            options(nostack)
+        );
+    }
 }
 
 //</editor-fold>
@@ -1158,14 +1216,16 @@ pub unsafe extern "C" fn __nx_svc_signal_process_wide_key(cv_key: *mut u32, coun
 /// Syscall code: [GET_SYSTEM_TICK](crate::code::GET_SYSTEM_TICK) (`0x1E`).
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetSystemTick>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_system_tick() -> u64 {
     let result: u64;
-    asm!(
-        "svc 0x1E",       // Issue the SVC call with immediate value 0x1E
-        out("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x1E",       // Issue the SVC call with immediate value 0x1E
+            out("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1185,22 +1245,24 @@ pub unsafe extern "C" fn __nx_svc_get_system_tick() -> u64 {
 /// | IN | _name_ | Pointer to the name of the port. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ConnectToNamedPort>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_connect_to_named_port(
     session: *mut Handle,
     name: *const c_char,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x1F",            // Issue the SVC call with immediate value 0x1F
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") session,      // Input: session in register x0
-        in("x1") name,         // Input: name in register x1
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x1F",            // Issue the SVC call with immediate value 0x1F
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") session,      // Input: session in register x0
+            in("x1") name,         // Input: name in register x1
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1215,15 +1277,17 @@ pub unsafe extern "C" fn __nx_svc_connect_to_named_port(
 /// | IN | _session_ | Session handle. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SendSyncRequestLight>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_send_sync_request_light(session: Handle) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x20",           // Issue the SVC call with immediate value 0x20
-        in("x0") session,     // Input: session in register x0
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x20",           // Issue the SVC call with immediate value 0x20
+            in("x0") session,     // Input: session in register x0
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1238,15 +1302,17 @@ pub unsafe extern "C" fn __nx_svc_send_sync_request_light(session: Handle) -> Re
 /// | IN | _session_ | Session handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SendSyncRequest>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_send_sync_request(session: Handle) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x21",           // Issue the SVC call with immediate value 0x21
-        in("x0") session,     // Input: session in register x0
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x21",           // Issue the SVC call with immediate value 0x21
+            in("x0") session,     // Input: session in register x0
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1263,21 +1329,23 @@ pub unsafe extern "C" fn __nx_svc_send_sync_request(session: Handle) -> Result {
 /// | IN | _session_ | Session handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SendSyncRequestWithUserBuffer>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_send_sync_request_with_user_buffer(
     usr_buffer: *mut c_void,
     size: u64,
     session: Handle,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x22",           // Issue the SVC call with immediate value 0x22
-        in("x0") usr_buffer,  // Input: usr_buffer in register x0
-        in("x1") size,        // Input: size in register x1
-        in("x2") session,     // Input: session in register x2
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x22",           // Issue the SVC call with immediate value 0x22
+            in("x0") usr_buffer,  // Input: usr_buffer in register x0
+            in("x1") size,        // Input: size in register x1
+            in("x2") session,     // Input: session in register x2
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1296,7 +1364,7 @@ pub unsafe extern "C" fn __nx_svc_send_sync_request_with_user_buffer(
 /// | IN | _session_ | Session handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SendAsyncRequestWithUserBuffer>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_send_async_request_with_user_buffer(
     handle: *mut Handle,
     usr_buffer: *mut c_void,
@@ -1304,18 +1372,20 @@ pub unsafe extern "C" fn __nx_svc_send_async_request_with_user_buffer(
     session: Handle,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x23",            // Issue the SVC call with immediate value 0x23
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") handle,       // Input: handle in register x0
-        in("x1") usr_buffer,   // Input: usr_buffer in register x1
-        in("x2") size,         // Input: size in register x2
-        in("x3") session,      // Input: session in register x3
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x23",            // Issue the SVC call with immediate value 0x23
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") handle,       // Input: handle in register x0
+            in("x1") usr_buffer,   // Input: usr_buffer in register x1
+            in("x2") size,         // Input: size in register x2
+            in("x3") session,      // Input: session in register x3
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1335,19 +1405,21 @@ pub unsafe extern "C" fn __nx_svc_send_async_request_with_user_buffer(
 /// | IN | _handle_ | Handle of the process to get the PID from |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetProcessId>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_process_id(process_id: *mut u64, handle: Handle) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x24",            // Issue the SVC call with immediate value 0x24
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str x1, [x2]",        // Store x1 in the memory pointed to by x2
-        in("x0") process_id,   // Input: process_id in register x0
-        in("x1") handle,       // Input: handle in register x1
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x24",            // Issue the SVC call with immediate value 0x24
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str x1, [x2]",        // Store x1 in the memory pointed to by x2
+            in("x0") process_id,   // Input: process_id in register x0
+            in("x1") handle,       // Input: handle in register x1
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1363,19 +1435,21 @@ pub unsafe extern "C" fn __nx_svc_get_process_id(process_id: *mut u64, handle: H
 /// | IN | _handle_ | Handle of the thread to get the TID from |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetThreadId>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_thread_id(thread_id: *mut u64, handle: Handle) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x25",            // Issue the SVC call with immediate value 0x25
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str x1, [x2]",        // Store x1 in the memory pointed to by x2
-        in("x0") thread_id,    // Input: thread_id in register x0
-        in("x1") handle,       // Input: handle in register x1
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x25",            // Issue the SVC call with immediate value 0x25
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str x1, [x2]",        // Store x1 in the memory pointed to by x2
+            in("x0") thread_id,    // Input: thread_id in register x0
+            in("x1") handle,       // Input: handle in register x1
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1396,21 +1470,23 @@ pub unsafe extern "C" fn __nx_svc_get_thread_id(thread_id: *mut u64, handle: Han
 /// | IN | _size_ | Size of the buffer to pass to the debugger |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#Break>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_break(
     reason: BreakReason,
     address: *mut c_void, // TODO: Review uintptr_t
     size: usize,          // TODO: Review uintptr_t
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x26",             // Issue the SVC call with immediate value 0x26
-        in("x0") reason as u32, // Input: break_reason in register x0
-        in("x1") address,       // Input: address in register x1
-        in("x2") size,          // Input: size in register x2
-        lateout("w0") result,   // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x26",             // Issue the SVC call with immediate value 0x26
+            in("x0") reason as u32, // Input: break_reason in register x0
+            in("x1") address,       // Input: address in register x1
+            in("x2") size,          // Input: size in register x2
+            lateout("w0") result,   // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1430,16 +1506,18 @@ pub unsafe extern "C" fn __nx_svc_break(
 /// | IN | _size_ | Size of the text in bytes |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#OutputDebugString>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_output_debug_string(dbg_str: *const c_char, size: u64) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x27",           // Issue the SVC call with immediate value 0x27
-        in("x0") dbg_str,     // Input: dbg_str in register x0
-        in("x1") size,        // Input: size in register x1
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x27",           // Issue the SVC call with immediate value 0x27
+            in("x0") dbg_str,     // Input: dbg_str in register x0
+            in("x1") size,        // Input: size in register x1
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1458,13 +1536,15 @@ pub unsafe extern "C" fn __nx_svc_output_debug_string(dbg_str: *const c_char, si
 /// | IN | _res_ | Result code |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ReturnFromException>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_return_from_exception(res: Result) -> ! {
-    asm!(
-        "svc 0x28",       // Issue the SVC call with immediate value 0x28
-        in("x0") res,     // Input: res in register x0
-        options(noreturn) // Never returns, and its return type is defined as ! (never).
-    )
+    unsafe {
+        asm!(
+            "svc 0x28",       // Issue the SVC call with immediate value 0x28
+            in("x0") res,     // Input: res in register x0
+            options(noreturn) // Never returns, and its return type is defined as ! (never).
+        )
+    }
 }
 
 /// Retrieves information about the system, or a certain kernel object.
@@ -1481,7 +1561,7 @@ pub unsafe extern "C" fn __nx_svc_return_from_exception(res: Result) -> ! {
 /// | IN | _id1_ | Second ID of the property to retrieve |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetInfo>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_info(
     out: *mut u64,
     id0: u32,
@@ -1489,18 +1569,20 @@ pub unsafe extern "C" fn __nx_svc_get_info(
     id1: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x29",            // Issue the SVC call with immediate value 0x29
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str x1, [x2]",        // Store x1 in the memory pointed to by x2
-        in("x0") out,          // Input: out in register x0
-        in("x1") id0,          // Input: id0 in register x1
-        in("x2") handle,       // Input: handle in register x2
-        in("x3") id1,          // Input: id1 in register x3
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x29",            // Issue the SVC call with immediate value 0x29
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str x1, [x2]",        // Store x1 in the memory pointed to by x2
+            in("x0") out,          // Input: out in register x0
+            in("x1") id0,          // Input: id0 in register x1
+            in("x2") handle,       // Input: handle in register x2
+            in("x3") id1,          // Input: id1 in register x3
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1518,12 +1600,14 @@ pub unsafe extern "C" fn __nx_svc_get_info(
 /// Syscall code: [FLUSH_ENTIRE_DATA_CACHE](crate::code::FLUSH_ENTIRE_DATA_CACHE) (`0x2A`).
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#FlushEntireDataCache>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_flush_entire_data_cache() {
-    asm!(
-        "svc 0x2A", // Issue the SVC call with immediate value 0x2A
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x2A", // Issue the SVC call with immediate value 0x2A
+            options(nostack)
+        );
+    }
 }
 
 /// Flushes data cache for a virtual address range.
@@ -1538,16 +1622,18 @@ pub unsafe extern "C" fn __nx_svc_flush_entire_data_cache() {
 /// | IN | _size_ | Size of region to flush |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#FlushDataCache>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_flush_data_cache(address: *mut c_void, size: usize) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x2B",           // Issue the SVC call with immediate value 0x2B
-        in("x0") address,     // Input: address in register x0
-        in("x1") size,        // Input: size in register x1
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x2B",           // Issue the SVC call with immediate value 0x2B
+            in("x0") address,     // Input: address in register x0
+            in("x1") size,        // Input: size in register x1
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1567,16 +1653,18 @@ pub unsafe extern "C" fn __nx_svc_flush_data_cache(address: *mut c_void, size: u
 /// | IN | _size_ | Size of the memory |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapPhysicalMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_map_physical_memory(address: *mut c_void, size: u64) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x2C",           // Issue the SVC call with immediate value 0x2C
-        in("x0") address,     // Input: address in register x0
-        in("x1") size,        // Input: size in register x1
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x2C",           // Issue the SVC call with immediate value 0x2C
+            in("x0") address,     // Input: address in register x0
+            in("x1") size,        // Input: size in register x1
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1592,16 +1680,18 @@ pub unsafe extern "C" fn __nx_svc_map_physical_memory(address: *mut c_void, size
 /// | IN | _size_ | Size of the memory |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapPhysicalMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_unmap_physical_memory(address: *mut c_void, size: u64) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x2D",           // Issue the SVC call with immediate value 0x2D
-        in("x0") address,     // Input: address in register x0
-        in("x1") size,        // Input: size in register x1
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x2D",           // Issue the SVC call with immediate value 0x2D
+            in("x0") address,     // Input: address in register x0
+            in("x1") size,        // Input: size in register x1
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1627,7 +1717,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_physical_memory(address: *mut c_void, si
 /// | IN | _ns_ | Nanoseconds in the future to get scheduled thread at.
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetDebugFutureThreadInfo>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_debug_future_thread_info(
     context: *mut LastThreadContext,
     thread_id: *mut u64,
@@ -1635,20 +1725,22 @@ pub unsafe extern "C" fn __nx_svc_get_debug_future_thread_info(
     ns: i64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "stp x0, x1, [sp, #-16]!", // Store x0 and x1 on the stack
-        "svc 0x2E",                // Issue the SVC call with immediate value 0x2E
-        "ldp x6, x7, [sp], #16",   // Load x6 and x7 from the stack
-        "stp x1, x2, [x6]",        // Store x1 and x2 in the memory pointed to by x6
-        "stp x3, x4, [x6, #16]",   // Store x3 and x4 in the memory pointed to by x6, offset by 16 bytes
-        "str x5, [x7]",            // Store x5 in the memory pointed to by x7
-        in("x0") context,          // Input: context in register x0
-        in("x1") thread_id,        // Input: thread_id in register x1
-        in("x2") debug,            // Input: debug in register x2
-        in("x3") ns,               // Input: ns in register x3
-        lateout("w0") result,      // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "stp x0, x1, [sp, #-16]!", // Store x0 and x1 on the stack
+            "svc 0x2E",                // Issue the SVC call with immediate value 0x2E
+            "ldp x6, x7, [sp], #16",   // Load x6 and x7 from the stack
+            "stp x1, x2, [x6]",        // Store x1 and x2 in the memory pointed to by x6
+            "stp x3, x4, [x6, #16]",   // Store x3 and x4 in the memory pointed to by x6, offset by 16 bytes
+            "str x5, [x7]",            // Store x5 in the memory pointed to by x7
+            in("x0") context,          // Input: context in register x0
+            in("x1") thread_id,        // Input: thread_id in register x1
+            in("x2") debug,            // Input: debug in register x2
+            in("x3") ns,               // Input: ns in register x3
+            lateout("w0") result,      // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1665,29 +1757,31 @@ pub unsafe extern "C" fn __nx_svc_get_debug_future_thread_info(
 /// | OUT | _flags_ | Output flags for the previously scheduled thread |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetLastThreadInfo>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_last_thread_info(
     context: *mut LastThreadContext,
     tls_address: *mut u64,
     flags: *mut u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "stp x1, x2, [sp, #-16]!", // Store x1 and x2 on the stack
-        "str x0, [sp, #-16]!",     // Store x0 on the stack
-        "svc 0x2F",                // Issue the SVC call with immediate value 0x2F
-        "ldr x7, [sp], #16",       // Load x7 from the stack
-        "stp x1, x2, [x7]",        // Store x1 and x2 in the memory pointed to by x7
-        "stp x3, x4, [x7, #16]",   // Store x3 and x4 in the memory pointed to by x7, offset by 16 bytes
-        "ldp x1, x2, [sp], #16",   // Load x1 and x2 from the stack
-        "str x5, [x1]",            // Store x5 in the memory pointed to by x1
-        "str w6, [x2]",            // Store w6 in the memory pointed to by x2
-        in("x0") context,          // Input: context in register x0
-        in("x1") tls_address,      // Input: tls_address in register x1
-        in("x2") flags,            // Input: flags in register x2
-        lateout("w0") result,      // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "stp x1, x2, [sp, #-16]!", // Store x1 and x2 on the stack
+            "str x0, [sp, #-16]!",     // Store x0 on the stack
+            "svc 0x2F",                // Issue the SVC call with immediate value 0x2F
+            "ldr x7, [sp], #16",       // Load x7 from the stack
+            "stp x1, x2, [x7]",        // Store x1 and x2 in the memory pointed to by x7
+            "stp x3, x4, [x7, #16]",   // Store x3 and x4 in the memory pointed to by x7, offset by 16 bytes
+            "ldp x1, x2, [sp], #16",   // Load x1 and x2 from the stack
+            "str x5, [x1]",            // Store x5 in the memory pointed to by x1
+            "str w6, [x2]",            // Store w6 in the memory pointed to by x2
+            in("x0") context,          // Input: context in register x0
+            in("x1") tls_address,      // Input: tls_address in register x1
+            in("x2") flags,            // Input: flags in register x2
+            lateout("w0") result,      // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1708,24 +1802,26 @@ pub unsafe extern "C" fn __nx_svc_get_last_thread_info(
 /// | IN | _which_ | Resource to query |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetResourceLimitLimitValue>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_resource_limit_limit_value(
     value: *mut i64,
     handle: Handle,
     which: LimitableResource,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x30",            // Issue the SVC call with immediate value 0x30
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str x1, [x2]",        // Store x1 in the memory pointed to by x2
-        in("x0") value,        // Input: value in register x0
-        in("x1") handle,       // Input: handle in register x1
-        in("x2") which as u32, // Input: which in register x2
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x30",            // Issue the SVC call with immediate value 0x30
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str x1, [x2]",        // Store x1 in the memory pointed to by x2
+            in("x0") value,        // Input: value in register x0
+            in("x1") handle,       // Input: handle in register x1
+            in("x2") which as u32, // Input: which in register x2
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1742,24 +1838,26 @@ pub unsafe extern "C" fn __nx_svc_get_resource_limit_limit_value(
 /// | IN | _which_ | Resource to query |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetResourceLimitCurrentValue>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_resource_limit_current_value(
     out: *mut i64,
     reslimit: Handle,
     which: LimitableResource,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x31",            // Issue the SVC call with immediate value 0x31
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str x1, [x2]",        // Store x1 in the memory pointed to by x2
-        in("x0") out,          // Input: out in register x0
-        in("x1") reslimit,     // Input: reslimit in register x1
-        in("x2") which as u32, // Input: which in register x2
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x31",            // Issue the SVC call with immediate value 0x31
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str x1, [x2]",        // Store x1 in the memory pointed to by x2
+            in("x0") out,          // Input: out in register x0
+            in("x1") reslimit,     // Input: reslimit in register x1
+            in("x2") which as u32, // Input: which in register x2
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1779,19 +1877,21 @@ pub unsafe extern "C" fn __nx_svc_get_resource_limit_current_value(
 /// | IN | _paused_ | Whether to pause or unpause the thread |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetThreadActivity>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_set_thread_activity(
     thread: Handle,
     paused: ThreadActivity,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x32",             // Issue the SVC call with immediate value 0x32
-        in("x0") thread,        // Input: thread in register x0
-        in("x1") paused as u32, // Input: paused in register x1
-        lateout("w0") result,   // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x32",             // Issue the SVC call with immediate value 0x32
+            in("x0") thread,        // Input: thread in register x0
+            in("x1") paused as u32, // Input: paused in register x1
+            lateout("w0") result,   // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1807,19 +1907,21 @@ pub unsafe extern "C" fn __nx_svc_set_thread_activity(
 /// | IN | _thread_ | Thread handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetThreadContext3>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_thread_context3(
     ctx: *mut ThreadContext,
     thread: Handle,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x33",           // Issue the SVC call with immediate value 0x33
-        in("x0") ctx,         // Input: ctx in register x0
-        in("x1") thread,      // Input: thread in register x1
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x33",           // Issue the SVC call with immediate value 0x33
+            in("x0") ctx,         // Input: ctx in register x0
+            in("x1") thread,      // Input: thread in register x1
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1841,7 +1943,7 @@ pub unsafe extern "C" fn __nx_svc_get_thread_context3(
 /// | IN | _timeout_ | Maximum time in nanoseconds to wait |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#WaitForAddress>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_wait_for_address(
     address: *mut c_void,
     arb_type: ArbitrationType,
@@ -1849,15 +1951,17 @@ pub unsafe extern "C" fn __nx_svc_wait_for_address(
     timeout: i64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x34",               // Issue the SVC call with immediate value 0x34
-        in("x0") address,         // Input: address in register x0
-        in("x1") arb_type as u32, // Input: arb_type in register x1
-        in("x2") value,           // Input: value in register x2
-        in("x3") timeout,         // Input: timeout in register x3
-        lateout("w0") result,     // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x34",               // Issue the SVC call with immediate value 0x34
+            in("x0") address,         // Input: address in register x0
+            in("x1") arb_type as u32, // Input: arb_type in register x1
+            in("x2") value,           // Input: value in register x2
+            in("x3") timeout,         // Input: timeout in register x3
+            lateout("w0") result,     // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1875,7 +1979,7 @@ pub unsafe extern "C" fn __nx_svc_wait_for_address(
 /// | IN | _count_ | Number of waiting threads to signal |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SignalToAddress>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_signal_to_address(
     address: *mut c_void,
     signal_type: SignalType,
@@ -1883,15 +1987,17 @@ pub unsafe extern "C" fn __nx_svc_signal_to_address(
     count: i32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x35",                  // Issue the SVC call with immediate value 0x35
-        in("x0") address,            // Input: address in register x0
-        in("x1") signal_type as u32, // Input: signal_type in register x1
-        in("x2") value,              // Input: value in register x2
-        in("x3") count,              // Input: count in register x3
-        lateout("w0") result,        // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x35",                  // Issue the SVC call with immediate value 0x35
+            in("x0") address,            // Input: address in register x0
+            in("x1") signal_type as u32, // Input: signal_type in register x1
+            in("x2") value,              // Input: value in register x2
+            in("x3") count,              // Input: count in register x3
+            lateout("w0") result,        // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1906,12 +2012,14 @@ pub unsafe extern "C" fn __nx_svc_signal_to_address(
 /// Syscall code: [SYNCHRONIZE_PREEMPTION_STATE](crate::code::SYNCHRONIZE_PREEMPTION_STATE) (`0x36`).
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SynchronizePreemptionState>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_synchronize_preemption_state() {
-    asm!(
-        "svc 0x36", // Issue the SVC call with immediate value 0x36
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x36", // Issue the SVC call with immediate value 0x36
+            options(nostack)
+        );
+    }
 }
 
 //</editor-fold>
@@ -1931,24 +2039,26 @@ pub unsafe extern "C" fn __nx_svc_synchronize_preemption_state() {
 /// | IN | _which_ | Resource to query |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetResourceLimitPeakValue>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_resource_limit_peak_value(
     out: *mut i64,
     reslimit: Handle,
     which: LimitableResource,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x37",            // Issue the SVC call with immediate value 0x37
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str x1, [x2]",        // Store x1 in the memory pointed to by x2
-        in("x0") out,          // Input: out in register x0
-        in("x1") reslimit,     // Input: reslimit in register x1
-        in("x2") which as u32, // Input: which in register x2
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x37",            // Issue the SVC call with immediate value 0x37
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str x1, [x2]",        // Store x1 in the memory pointed to by x2
+            in("x0") out,          // Input: out in register x0
+            in("x1") reslimit,     // Input: reslimit in register x1
+            in("x2") which as u32, // Input: which in register x2
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -1972,19 +2082,21 @@ pub unsafe extern "C" fn __nx_svc_get_resource_limit_peak_value(
 /// | IN | _which_ | [IoPoolType] to create |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#:~:text=0x39,CreateIoPool>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_create_io_pool(handle: *mut Handle, which: IoPoolType) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x39",            // Issue the SVC call with immediate value 0x37
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") handle,       // Input: handle in register x0
-        in("x1") which as u32, // Input: which in register x1
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x39",            // Issue the SVC call with immediate value 0x37
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") handle,       // Input: handle in register x0
+            in("x1") which as u32, // Input: which in register x1
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2008,7 +2120,7 @@ pub unsafe extern "C" fn __nx_svc_create_io_pool(handle: *mut Handle, which: IoP
 /// | IN | _perm_ | [MemoryPermission] configuration |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#:~:text=0x3A,CreateIoRegion>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_create_io_region(
     handle: *mut Handle,
     io_pool_h: Handle,
@@ -2018,20 +2130,22 @@ pub unsafe extern "C" fn __nx_svc_create_io_region(
     perm: u32, // TODO: MemoryPermission bitfield
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!",     // Store x0 on the stack
-        "svc 0x3A",                // Issue the SVC call with immediate value 0x38
-        "ldr x2, [sp], #16",       // Load x2 from the stack
-        "str w1, [x2]",            // Store w1 in the memory pointed to by x2
-        in("x0") handle,           // Input: handle in register x0
-        in("x1") io_pool_h,        // Input: io_pool_h in register x1
-        in("x2") physical_address, // Input: physical_address in register x2
-        in("x3") size,             // Input: size in register x3
-        in("x4") mapping as u32,   // Input: mapping in register x4
-        in("x5") perm,             // Input: perm in register x5
-        lateout("w0") result,      // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!",     // Store x0 on the stack
+            "svc 0x3A",                // Issue the SVC call with immediate value 0x38
+            "ldr x2, [sp], #16",       // Load x2 from the stack
+            "str w1, [x2]",            // Store w1 in the memory pointed to by x2
+            in("x0") handle,           // Input: handle in register x0
+            in("x1") io_pool_h,        // Input: io_pool_h in register x1
+            in("x2") physical_address, // Input: physical_address in register x2
+            in("x3") size,             // Input: size in register x3
+            in("x4") mapping as u32,   // Input: mapping in register x4
+            in("x5") perm,             // Input: perm in register x5
+            lateout("w0") result,      // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2051,14 +2165,16 @@ pub unsafe extern "C" fn __nx_svc_create_io_region(
 /// | IN | _arg0_ | Additional argument |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#DumpInfo>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_dump_info(dump_info_type: u32, arg0: u64) {
-    asm!(
-        "svc 0x3C",              // Issue the SVC call with immediate value 0x3C
-        in("x0") dump_info_type, // Input: dump_info_type in register x0
-        in("x1") arg0,           // Input: arg0 in register x1
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x3C",              // Issue the SVC call with immediate value 0x3C
+            in("x0") dump_info_type, // Input: dump_info_type in register x0
+            in("x1") arg0,           // Input: arg0 in register x1
+            options(nostack)
+        );
+    }
 }
 
 /// Performs a debugging operation on the kernel. [4.0.0+]
@@ -2075,21 +2191,23 @@ pub unsafe extern "C" fn __nx_svc_dump_info(dump_info_type: u32, arg0: u64) {
 /// | IN | _arg2_ | Third additional argument |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#KernelDebug>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_kernel_debug(
     kern_debug_type: u32,
     arg0: u64,
     arg1: u64,
     arg2: u64,
 ) {
-    asm!(
-        "svc 0x3C",               // Issue the SVC call with immediate value 0x3C
-        in("x0") kern_debug_type, // Input: kern_debug_type in register x0
-        in("x1") arg0,            // Input: arg0 in register x1
-        in("x2") arg1,            // Input: arg1 in register x2
-        in("x3") arg2,            // Input: arg2 in register x3
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x3C",               // Issue the SVC call with immediate value 0x3C
+            in("x0") kern_debug_type, // Input: kern_debug_type in register x0
+            in("x1") arg0,            // Input: arg0 in register x1
+            in("x2") arg1,            // Input: arg1 in register x2
+            in("x3") arg2,            // Input: arg2 in register x3
+            options(nostack)
+        );
+    }
 }
 
 /// Changes the kernel's trace state. [4.0.0+]
@@ -2103,13 +2221,15 @@ pub unsafe extern "C" fn __nx_svc_kernel_debug(
 /// | IN | _kern_trace_state_ | New kernel trace state |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ChangeKernelTraceState>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_change_kernel_trace_state(kern_trace_state: u32) {
-    asm!(
-        "svc 0x3D",                  // Issue the SVC call with immediate value 0x3D
-        in("x0") kern_trace_state,   // Input: kern_trace_state in register x0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x3D",                  // Issue the SVC call with immediate value 0x3D
+            in("x0") kern_trace_state,   // Input: kern_trace_state in register x0
+            options(nostack)
+        );
+    }
 }
 
 //</editor-fold>
@@ -2130,7 +2250,7 @@ pub unsafe extern "C" fn __nx_svc_change_kernel_trace_state(kern_trace_state: u3
 /// | IN | _unk1_ | Unknown parameter |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateSession>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_create_session(
     server_handle: *mut Handle,
     client_handle: *mut Handle,
@@ -2138,19 +2258,21 @@ pub unsafe extern "C" fn __nx_svc_create_session(
     unk1: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "stp x0, x1, [sp, #-16]!", // Store x0 and x1 on the stack
-        "svc 0x40",                // Issue the SVC call with immediate value 0x40
-        "ldp x3, x4, [sp], #16",   // Load x3 and x4 from the stack
-        "str w1, [x3]",            // Store w1 in the memory pointed to by x3
-        "str w2, [x4]",            // Store w2 in the memory pointed to by x4
-        in("x0") server_handle,    // Input: server_handle in register x0
-        in("x1") client_handle,    // Input: client_handle in register x1
-        in("x2") is_light as u32,  // Input: is_light in register x2
-        in("x3") unk1,             // Input: unk1 in register x3
-        lateout("w0") result,      // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "stp x0, x1, [sp, #-16]!", // Store x0 and x1 on the stack
+            "svc 0x40",                // Issue the SVC call with immediate value 0x40
+            "ldp x3, x4, [sp], #16",   // Load x3 and x4 from the stack
+            "str w1, [x3]",            // Store w1 in the memory pointed to by x3
+            "str w2, [x4]",            // Store w2 in the memory pointed to by x4
+            in("x0") server_handle,    // Input: server_handle in register x0
+            in("x1") client_handle,    // Input: client_handle in register x1
+            in("x2") is_light as u32,  // Input: is_light in register x2
+            in("x3") unk1,             // Input: unk1 in register x3
+            lateout("w0") result,      // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2166,22 +2288,24 @@ pub unsafe extern "C" fn __nx_svc_create_session(
 /// | IN | _port_handle_ | Handle to the port to accept from |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#AcceptSession>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_accept_session(
     session: *mut Handle,
     port_handle: Handle,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!",   // Store x0 on the stack
-        "svc 0x41",              // Issue the SVC call with immediate value 0x41
-        "ldr x2, [sp], #16",     // Load x2 from the stack
-        "str w1, [x2]",          // Store w1 in the memory pointed to by x2
-        in("x0") session,        // Input: session in register x0
-        in("x1") port_handle,    // Input: port_handle in register x1
-        lateout("w0") result,    // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!",   // Store x0 on the stack
+            "svc 0x41",              // Issue the SVC call with immediate value 0x41
+            "ldr x2, [sp], #16",     // Load x2 from the stack
+            "str w1, [x2]",          // Store w1 in the memory pointed to by x2
+            in("x0") session,        // Input: session in register x0
+            in("x1") port_handle,    // Input: port_handle in register x1
+            lateout("w0") result,    // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2196,15 +2320,17 @@ pub unsafe extern "C" fn __nx_svc_accept_session(
 /// | IN | _handle_ | Handle to perform IPC on |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ReplyAndReceiveLight>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_reply_and_receive_light(handle: Handle) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x42",           // Issue the SVC call with immediate value 0x42
-        in("x0") handle,      // Input: handle in register x0
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x42",           // Issue the SVC call with immediate value 0x42
+            in("x0") handle,      // Input: handle in register x0
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2237,7 +2363,7 @@ pub unsafe extern "C" fn __nx_svc_reply_and_receive_light(handle: Handle) -> Res
 /// | IN | _timeout_ | Timeout in nanoseconds |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ReplyAndReceive>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_reply_and_receive(
     index: *mut i32,
     handles: *const u32,
@@ -2246,19 +2372,21 @@ pub unsafe extern "C" fn __nx_svc_reply_and_receive(
     timeout: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x43",            // Issue the SVC call with immediate value 0x43
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") index,        // Input: index in register x0
-        in("x1") handles,      // Input: handles in register x1
-        in("x2") handle_count, // Input: handle_count in register x2
-        in("x3") reply_target, // Input: reply_target in register x3
-        in("x4") timeout,      // Input: timeout in register x4
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x43",            // Issue the SVC call with immediate value 0x43
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") index,        // Input: index in register x0
+            in("x1") handles,      // Input: handles in register x1
+            in("x2") handle_count, // Input: handle_count in register x2
+            in("x3") reply_target, // Input: reply_target in register x3
+            in("x4") timeout,      // Input: timeout in register x4
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2279,7 +2407,7 @@ pub unsafe extern "C" fn __nx_svc_reply_and_receive(
 /// | IN | _timeout_ | Timeout in nanoseconds |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ReplyAndReceiveWithUserBuffer>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_reply_and_receive_with_user_buffer(
     index: *mut i32,
     usr_buffer: *mut c_void,
@@ -2290,21 +2418,23 @@ pub unsafe extern "C" fn __nx_svc_reply_and_receive_with_user_buffer(
     timeout: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x44",            // Issue the SVC call with immediate value 0x44
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") index,        // Input: index in register x0
-        in("x1") usr_buffer,   // Input: usr_buffer in register x1
-        in("x2") size,         // Input: size in register x2
-        in("x3") handles,      // Input: handles in register x3
-        in("x4") handle_count, // Input: handle_count in register x4
-        in("x5") reply_target, // Input: reply_target in register x5
-        in("x6") timeout,      // Input: timeout in register x6
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x44",            // Issue the SVC call with immediate value 0x44
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") index,        // Input: index in register x0
+            in("x1") usr_buffer,   // Input: usr_buffer in register x1
+            in("x2") size,         // Input: size in register x2
+            in("x3") handles,      // Input: handles in register x3
+            in("x4") handle_count, // Input: handle_count in register x4
+            in("x5") reply_target, // Input: reply_target in register x5
+            in("x6") timeout,      // Input: timeout in register x6
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2324,23 +2454,25 @@ pub unsafe extern "C" fn __nx_svc_reply_and_receive_with_user_buffer(
 /// | OUT | _client_handle_ | Output handle for client |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateEvent>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_create_event(
     server_handle: *mut Handle,
     client_handle: *mut Handle,
 ) -> Result {
     let result: Result;
-    asm!(
-        "stp x0, x1, [sp, #-16]!", // Store x0 and x1 on the stack
-        "svc 0x45",                // Issue the SVC call with immediate value 0x45
-        "ldp x3, x4, [sp], #16",   // Load x3 and x4 from the stack
-        "str w1, [x3]",            // Store w1 in the memory pointed to by x3
-        "str w2, [x4]",            // Store w2 in the memory pointed to by x4
-        in("x0") server_handle,    // Input: server_handle in register x0
-        in("x1") client_handle,    // Input: client_handle in register x1
-        lateout("w0") result,      // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "stp x0, x1, [sp, #-16]!", // Store x0 and x1 on the stack
+            "svc 0x45",                // Issue the SVC call with immediate value 0x45
+            "ldp x3, x4, [sp], #16",   // Load x3 and x4 from the stack
+            "str w1, [x3]",            // Store w1 in the memory pointed to by x3
+            "str w2, [x4]",            // Store w2 in the memory pointed to by x4
+            in("x0") server_handle,    // Input: server_handle in register x0
+            in("x1") client_handle,    // Input: client_handle in register x1
+            lateout("w0") result,      // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2362,7 +2494,7 @@ pub unsafe extern "C" fn __nx_svc_create_event(
 /// | IN | _perm_ | Memory permissions |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#:~:text=0x46,MapIoRegion>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_map_io_region(
     io_region_h: Handle,
     address: *mut c_void,
@@ -2370,15 +2502,17 @@ pub unsafe extern "C" fn __nx_svc_map_io_region(
     perm: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x46",           // Issue the SVC call with immediate value 0x46
-        in("x0") io_region_h, // Input: io_region_h in register x0
-        in("x1") address,     // Input: address in register x1
-        in("x2") size,        // Input: size in register x2
-        in("x3") perm,        // Input: perm in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x46",           // Issue the SVC call with immediate value 0x46
+            in("x0") io_region_h, // Input: io_region_h in register x0
+            in("x1") address,     // Input: address in register x1
+            in("x2") size,        // Input: size in register x2
+            in("x3") perm,        // Input: perm in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2395,21 +2529,23 @@ pub unsafe extern "C" fn __nx_svc_map_io_region(
 /// | IN | _size_ | Size of the mapping |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#:~:text=0x47,UnmapIoRegion>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_unmap_io_region(
     io_region_h: Handle,
     address: *mut c_void,
     size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x47",           // Issue the SVC call with immediate value 0x47
-        in("x0") io_region_h, // Input: io_region_h in register x0
-        in("x1") address,     // Input: address in register x1
-        in("x2") size,        // Input: size in register x2
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x47",           // Issue the SVC call with immediate value 0x47
+            in("x0") io_region_h, // Input: io_region_h in register x0
+            in("x1") address,     // Input: address in register x1
+            in("x2") size,        // Input: size in register x2
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2425,19 +2561,21 @@ pub unsafe extern "C" fn __nx_svc_unmap_io_region(
 /// | IN | _size_ | Size of the mapping |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapPhysicalMemoryUnsafe>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_map_physical_memory_unsafe(
     address: *mut c_void,
     size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x48",           // Issue the SVC call with immediate value 0x48
-        in("x0") address,     // Input: address in register x0
-        in("x1") size,        // Input: size in register x1
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x48",           // Issue the SVC call with immediate value 0x48
+            in("x0") address,     // Input: address in register x0
+            in("x1") size,        // Input: size in register x1
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2453,19 +2591,21 @@ pub unsafe extern "C" fn __nx_svc_map_physical_memory_unsafe(
 /// | IN | _size_ | Size of the mapping |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapPhysicalMemoryUnsafe>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_unmap_physical_memory_unsafe(
     address: *mut c_void,
     size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x49",           // Issue the SVC call with immediate value 0x49
-        in("x0") address,     // Input: address in register x0
-        in("x1") size,        // Input: size in register x1
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x49",           // Issue the SVC call with immediate value 0x49
+            in("x0") address,     // Input: address in register x0
+            in("x1") size,        // Input: size in register x1
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2480,15 +2620,17 @@ pub unsafe extern "C" fn __nx_svc_unmap_physical_memory_unsafe(
 /// | IN | _size_ | Size limit |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetUnsafeLimit>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_set_unsafe_limit(size: u64) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x4A",           // Issue the SVC call with immediate value 0x4A
-        in("x0") size,        // Input: size in register x0
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x4A",           // Issue the SVC call with immediate value 0x4A
+            in("x0") size,        // Input: size in register x0
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2513,24 +2655,26 @@ pub unsafe extern "C" fn __nx_svc_set_unsafe_limit(size: u64) -> Result {
 /// | IN | _size_ | Size of the memory |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateCodeMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_create_code_memory(
     handle: *mut Handle,
     src_addr: *mut c_void,
     size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x4B",            // Issue the SVC call with immediate value 0x4B
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") handle,       // Input: handle in register x0
-        in("x1") src_addr,     // Input: src_addr in register x1
-        in("x2") size,         // Input: size in register x2
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x4B",            // Issue the SVC call with immediate value 0x4B
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") handle,       // Input: handle in register x0
+            in("x1") src_addr,     // Input: src_addr in register x1
+            in("x2") size,         // Input: size in register x2
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2553,7 +2697,7 @@ pub unsafe extern "C" fn __nx_svc_create_code_memory(
 /// | IN | _perm_ | Memory permissions |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ControlCodeMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_control_code_memory(
     code_handle: Handle,
     op: CodeMapOperation,
@@ -2562,16 +2706,18 @@ pub unsafe extern "C" fn __nx_svc_control_code_memory(
     perm: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x4C",           // Issue the SVC call with immediate value 0x4C
-        in("x0") code_handle, // Input: code_handle in register x0
-        in("x1") op as u32,   // Input: op in register x1
-        in("x2") dst_addr,    // Input: dst_addr in register x2
-        in("x3") size,        // Input: size in register x3
-        in("x4") perm,        // Input: perm in register x4
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x4C",           // Issue the SVC call with immediate value 0x4C
+            in("x0") code_handle, // Input: code_handle in register x0
+            in("x1") op as u32,   // Input: op in register x1
+            in("x2") dst_addr,    // Input: dst_addr in register x2
+            in("x3") size,        // Input: size in register x3
+            in("x4") perm,        // Input: perm in register x4
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2590,12 +2736,14 @@ pub unsafe extern "C" fn __nx_svc_control_code_memory(
 /// Syscall code: [SLEEP_SYSTEM](crate::code::SLEEP_SYSTEM) (`0x4D`).
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SleepSystem>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_sleep_system() {
-    asm!(
-        "svc 0x4D", // Issue the SVC call with immediate value 0x4D
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x4D", // Issue the SVC call with immediate value 0x4D
+            options(nostack)
+        );
+    }
 }
 
 //</editor-fold>
@@ -2620,7 +2768,7 @@ pub unsafe extern "C" fn __nx_svc_sleep_system() {
 /// | IN | _value_ | Input value to write |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ReadWriteRegister>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_read_write_register(
     out_val: *mut u32,
     reg_addr: u64,
@@ -2628,18 +2776,20 @@ pub unsafe extern "C" fn __nx_svc_read_write_register(
     value: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x4E",            // Issue the SVC call with immediate value 0x4E
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") out_val,      // Input: out_val in register x0
-        in("x1") reg_addr,     // Input: reg_addr in register x1
-        in("x2") mask,         // Input: mask in register x2
-        in("x3") value,        // Input: value in register x3
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x4E",            // Issue the SVC call with immediate value 0x4E
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") out_val,      // Input: out_val in register x0
+            in("x1") reg_addr,     // Input: reg_addr in register x1
+            in("x2") mask,         // Input: mask in register x2
+            in("x3") value,        // Input: value in register x3
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2659,19 +2809,21 @@ pub unsafe extern "C" fn __nx_svc_read_write_register(
 /// | IN | _paused_ | Whether to pause (1) or unpause (0) the process |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetProcessActivity>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_set_process_activity(
     process: Handle,
     paused: ProcessActivity,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x4F",             // Issue the SVC call with immediate value 0x4F
-        in("x0") process,       // Input: process in register x0
-        in("x1") paused as u32, // Input: paused in register x1
-        lateout("w0") result,   // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x4F",             // Issue the SVC call with immediate value 0x4F
+            in("x0") process,       // Input: process in register x0
+            in("x1") paused as u32, // Input: paused in register x1
+            lateout("w0") result,   // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2693,7 +2845,7 @@ pub unsafe extern "C" fn __nx_svc_set_process_activity(
 /// | IN | _other_perm_ | [MemoryPermission] for other processes |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateSharedMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_create_shared_memory(
     handle: *mut Handle,
     size: usize,
@@ -2701,18 +2853,20 @@ pub unsafe extern "C" fn __nx_svc_create_shared_memory(
     other_perm: u32, // TODO: MemoryPermission bitfield
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x50",            // Issue the SVC call with immediate value 0x4F
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") handle,       // Input: handle in register x0
-        in("x1") size,         // Input: size in register x1
-        in("x2") local_perm,   // Input: local_perm in register x2
-        in("x3") other_perm,   // Input: other_perm in register x3
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x50",            // Issue the SVC call with immediate value 0x4F
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") handle,       // Input: handle in register x0
+            in("x1") size,         // Input: size in register x1
+            in("x2") local_perm,   // Input: local_perm in register x2
+            in("x3") other_perm,   // Input: other_perm in register x3
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2730,7 +2884,7 @@ pub unsafe extern "C" fn __nx_svc_create_shared_memory(
 /// | IN | _perm_ | Memory permissions |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapTransferMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_map_transfer_memory(
     tmem_handle: Handle,
     addr: *mut c_void,
@@ -2738,15 +2892,17 @@ pub unsafe extern "C" fn __nx_svc_map_transfer_memory(
     perm: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x51",           // Issue the SVC call with immediate value 0x50
-        in("x0") tmem_handle, // Input: tmem_handle in register x0
-        in("x1") addr,        // Input: addr in register x1
-        in("x2") size,        // Input: size in register x2
-        in("x3") perm,        // Input: perm in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x51",           // Issue the SVC call with immediate value 0x50
+            in("x0") tmem_handle, // Input: tmem_handle in register x0
+            in("x1") addr,        // Input: addr in register x1
+            in("x2") size,        // Input: size in register x2
+            in("x3") perm,        // Input: perm in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2763,21 +2919,23 @@ pub unsafe extern "C" fn __nx_svc_map_transfer_memory(
 /// | IN | _size_ | Size of the transfer memory |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapTransferMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_unmap_transfer_memory(
     tmem_handle: Handle,
     addr: *mut c_void,
     size: usize,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x52",           // Issue the SVC call with immediate value 0x51
-        in("x0") tmem_handle, // Input: tmem_handle in register x0
-        in("x1") addr,        // Input: addr in register x1
-        in("x2") size,        // Input: size in register x2
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x52",           // Issue the SVC call with immediate value 0x51
+            in("x0") tmem_handle, // Input: tmem_handle in register x0
+            in("x1") addr,        // Input: addr in register x1
+            in("x2") size,        // Input: size in register x2
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2798,24 +2956,26 @@ pub unsafe extern "C" fn __nx_svc_unmap_transfer_memory(
 /// | IN | _flag_ | Flags for the event |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateInterruptEvent>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_create_interrupt_event(
     handle: *mut Handle,
     irq_num: u64,
     flag: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x53",            // Issue the SVC call with immediate value 0x52
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") handle,       // Input: handle in register x0
-        in("x1") irq_num,      // Input: irq_num in register x1
-        in("x2") flag,         // Input: flag in register x2
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x53",            // Issue the SVC call with immediate value 0x52
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") handle,       // Input: handle in register x0
+            in("x1") irq_num,      // Input: irq_num in register x1
+            in("x2") flag,         // Input: flag in register x2
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2831,23 +2991,25 @@ pub unsafe extern "C" fn __nx_svc_create_interrupt_event(
 /// | IN | _virtaddr_ | Virtual address to query |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#QueryPhysicalAddress>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_query_physical_address(
     out: *mut PhysicalMemoryInfo,
     virtaddr: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x54",            // Issue the SVC call with immediate value 0x54
-        "ldr x4, [sp], #16",   // Load x4 from the stack
-        "stp x1, x2, [x4]",    // Store x1 and x2 in the memory pointed to by x4
-        "str x3, [x4, #16]",   // Store x3 in the memory pointed to by x4, offset by 16 bytes
-        in("x0") out,          // Input: out in register x0
-        in("x1") virtaddr,     // Input: virtaddr in register x1
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x54",            // Issue the SVC call with immediate value 0x54
+            "ldr x4, [sp], #16",   // Load x4 from the stack
+            "stp x1, x2, [x4]",    // Store x1 and x2 in the memory pointed to by x4
+            "str x3, [x4, #16]",   // Store x3 in the memory pointed to by x4, offset by 16 bytes
+            in("x0") out,          // Input: out in register x0
+            in("x1") virtaddr,     // Input: virtaddr in register x1
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2865,7 +3027,7 @@ pub unsafe extern "C" fn __nx_svc_query_physical_address(
 /// | IN | _size_ | Size of the region |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#:~:text=%5B10.0.0%2B%5D-,0x55,QueryMemoryMapping,-uintptr_t%20*out_address%2C%20size_t>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_query_memory_mapping(
     virtaddr: *mut u64,
     out_size: *mut u64,
@@ -2873,19 +3035,21 @@ pub unsafe extern "C" fn __nx_svc_query_memory_mapping(
     size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "stp x0, x1, [sp, #-16]!", // Store x0 and x1 on the stack
-        "svc 0x55",                // Issue the SVC call with immediate value 0x54
-        "ldp x3, x4, [sp], #16",   // Load x3 and x4 from the stack
-        "str x1, [x3]",            // Store x1 in the memory pointed to by x3
-        "str x2, [x4]",            // Store x2 in the memory pointed to by x4
-        in("x0") virtaddr,         // Input: virtaddr in register x0
-        in("x1") out_size,         // Input: out_size in register x1
-        in("x2") physaddr,         // Input: physaddr in register x2
-        in("x3") size,             // Input: size in register x3
-        lateout("w0") result,      // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "stp x0, x1, [sp, #-16]!", // Store x0 and x1 on the stack
+            "svc 0x55",                // Issue the SVC call with immediate value 0x54
+            "ldp x3, x4, [sp], #16",   // Load x3 and x4 from the stack
+            "str x1, [x3]",            // Store x1 in the memory pointed to by x3
+            "str x2, [x4]",            // Store x2 in the memory pointed to by x4
+            in("x0") virtaddr,         // Input: virtaddr in register x0
+            in("x1") out_size,         // Input: out_size in register x1
+            in("x2") physaddr,         // Input: physaddr in register x2
+            in("x3") size,             // Input: size in register x3
+            lateout("w0") result,      // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2902,24 +3066,26 @@ pub unsafe extern "C" fn __nx_svc_query_memory_mapping(
 /// | IN | _size_ | Size of the region |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#QueryIoMapping>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_legacy_query_io_mapping(
     virtaddr: *mut u64,
     physaddr: u64,
     size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x55",            // Issue the SVC call with immediate value 0x55
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str x1, [x2]",        // Store x1 in the memory pointed to by x2
-        in("x0") virtaddr,     // Input: virtaddr in register x0
-        in("x1") physaddr,     // Input: physaddr in register x1
-        in("x2") size,         // Input: size in register x2
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x55",            // Issue the SVC call with immediate value 0x55
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str x1, [x2]",        // Store x1 in the memory pointed to by x2
+            in("x0") virtaddr,     // Input: virtaddr in register x0
+            in("x1") physaddr,     // Input: physaddr in register x1
+            in("x2") size,         // Input: size in register x2
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2940,24 +3106,26 @@ pub unsafe extern "C" fn __nx_svc_legacy_query_io_mapping(
 /// | IN | _dev_size_ | Size of the device address space |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateDeviceAddressSpace>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_create_device_address_space(
     handle: *mut Handle,
     dev_addr: u64,
     dev_size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x56",            // Issue the SVC call with immediate value 0x56
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") handle,       // Input: handle in register x0
-        in("x1") dev_addr,     // Input: dev_addr in register x1
-        in("x2") dev_size,     // Input: dev_size in register x2
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x56",            // Issue the SVC call with immediate value 0x56
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") handle,       // Input: handle in register x0
+            in("x1") dev_addr,     // Input: dev_addr in register x1
+            in("x2") dev_size,     // Input: dev_size in register x2
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -2973,19 +3141,21 @@ pub unsafe extern "C" fn __nx_svc_create_device_address_space(
 /// | IN | _handle_ | Handle to the device address space |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#AttachDeviceAddressSpace>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_attach_device_address_space(
     device: u64,
     handle: Handle,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x57",           // Issue the SVC call with immediate value 0x57
-        in("x0") device,      // Input: device in register x0
-        in("x1") handle,      // Input: handle in register x1
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x57",           // Issue the SVC call with immediate value 0x57
+            in("x0") device,      // Input: device in register x0
+            in("x1") handle,      // Input: handle in register x1
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3001,19 +3171,21 @@ pub unsafe extern "C" fn __nx_svc_attach_device_address_space(
 /// | IN | _handle_ | Handle to the device address space |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#DetachDeviceAddressSpace>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_detach_device_address_space(
     device: u64,
     handle: Handle,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x58",           // Issue the SVC call with immediate value 0x58
-        in("x0") device,      // Input: device in register x0
-        in("x1") handle,      // Input: handle in register x1
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x58",           // Issue the SVC call with immediate value 0x58
+            in("x0") device,      // Input: device in register x0
+            in("x1") handle,      // Input: handle in register x1
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3033,7 +3205,7 @@ pub unsafe extern "C" fn __nx_svc_detach_device_address_space(
 /// | IN | _option_ | Mapping options |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapDeviceAddressSpaceByForce>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_map_device_address_space_by_force(
     handle: Handle,
     proc_handle: Handle,
@@ -3043,17 +3215,19 @@ pub unsafe extern "C" fn __nx_svc_map_device_address_space_by_force(
     option: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x59",           // Issue the SVC call with immediate value 0x59
-        in("x0") handle,      // Input: handle in register x0
-        in("x1") proc_handle, // Input: proc_handle in register x1
-        in("x2") map_addr,    // Input: map_addr in register x2
-        in("x3") dev_size,    // Input: dev_size in register x3
-        in("x4") dev_addr,    // Input: dev_addr in register x4
-        in("x5") option,      // Input: option in register x5
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x59",           // Issue the SVC call with immediate value 0x59
+            in("x0") handle,      // Input: handle in register x0
+            in("x1") proc_handle, // Input: proc_handle in register x1
+            in("x2") map_addr,    // Input: map_addr in register x2
+            in("x3") dev_size,    // Input: dev_size in register x3
+            in("x4") dev_addr,    // Input: dev_addr in register x4
+            in("x5") option,      // Input: option in register x5
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3073,7 +3247,7 @@ pub unsafe extern "C" fn __nx_svc_map_device_address_space_by_force(
 /// | IN | _option_ | Mapping options |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapDeviceAddressSpaceAligned>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_map_device_address_space_aligned(
     handle: Handle,
     proc_handle: Handle,
@@ -3083,17 +3257,19 @@ pub unsafe extern "C" fn __nx_svc_map_device_address_space_aligned(
     option: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x5A",           // Issue the SVC call with immediate value 0x5A
-        in("x0") handle,      // Input: handle in register x0
-        in("x1") proc_handle, // Input: proc_handle in register x1
-        in("x2") map_addr,    // Input: map_addr in register x2
-        in("x3") dev_size,    // Input: dev_size in register x3
-        in("x4") dev_addr,    // Input: dev_addr in register x4
-        in("x5") option,      // Input: option in register x5
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x5A",           // Issue the SVC call with immediate value 0x5A
+            in("x0") handle,      // Input: handle in register x0
+            in("x1") proc_handle, // Input: proc_handle in register x1
+            in("x2") map_addr,    // Input: map_addr in register x2
+            in("x3") dev_size,    // Input: dev_size in register x3
+            in("x4") dev_addr,    // Input: dev_addr in register x4
+            in("x5") option,      // Input: option in register x5
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3114,7 +3290,7 @@ pub unsafe extern "C" fn __nx_svc_map_device_address_space_aligned(
 /// | IN | _perm_ | Memory permissions |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapDeviceAddressSpace>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_map_device_address_space(
     out_mapped_size: *mut u64,
     handle: Handle,
@@ -3125,21 +3301,23 @@ pub unsafe extern "C" fn __nx_svc_map_device_address_space(
     perm: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!",    // Store x0 on the stack
-        "svc 0x5B",               // Issue the SVC call with immediate value 0x5B
-        "ldr x2, [sp], #16",      // Load x2 from the stack
-        "str w1, [x2]",           // Store w1 in the memory pointed to by x2
-        in("x0") out_mapped_size, // Input: out_mapped_size in register x0
-        in("x1") handle,          // Input: handle in register x1
-        in("x2") proc_handle,     // Input: proc_handle in register x2
-        in("x3") map_addr,        // Input: map_addr in register x3
-        in("x4") dev_size,        // Input: dev_size in register x4
-        in("x5") dev_addr,        // Input: dev_addr in register x5
-        in("x6") perm,            // Input: perm in register x6
-        lateout("w0") result,     // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!",    // Store x0 on the stack
+            "svc 0x5B",               // Issue the SVC call with immediate value 0x5B
+            "ldr x2, [sp], #16",      // Load x2 from the stack
+            "str w1, [x2]",           // Store w1 in the memory pointed to by x2
+            in("x0") out_mapped_size, // Input: out_mapped_size in register x0
+            in("x1") handle,          // Input: handle in register x1
+            in("x2") proc_handle,     // Input: proc_handle in register x2
+            in("x3") map_addr,        // Input: map_addr in register x3
+            in("x4") dev_size,        // Input: dev_size in register x4
+            in("x5") dev_addr,        // Input: dev_addr in register x5
+            in("x6") perm,            // Input: perm in register x6
+            lateout("w0") result,     // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3158,7 +3336,7 @@ pub unsafe extern "C" fn __nx_svc_map_device_address_space(
 /// | IN | _dev_addr_ | Device address |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapDeviceAddressSpace>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_unmap_device_address_space(
     handle: Handle,
     proc_handle: Handle,
@@ -3167,16 +3345,18 @@ pub unsafe extern "C" fn __nx_svc_unmap_device_address_space(
     dev_addr: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x5C",           // Issue the SVC call with immediate value 0x5C
-        in("x0") handle,      // Input: handle in register x0
-        in("x1") proc_handle, // Input: proc_handle in register x1
-        in("x2") map_addr,    // Input: map_addr in register x2
-        in("x3") map_size,    // Input: map_size in register x3
-        in("x4") dev_addr,    // Input: dev_addr in register x4
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x5C",           // Issue the SVC call with immediate value 0x5C
+            in("x0") handle,      // Input: handle in register x0
+            in("x1") proc_handle, // Input: proc_handle in register x1
+            in("x2") map_addr,    // Input: map_addr in register x2
+            in("x3") map_size,    // Input: map_size in register x3
+            in("x4") dev_addr,    // Input: dev_addr in register x4
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3197,21 +3377,23 @@ pub unsafe extern "C" fn __nx_svc_unmap_device_address_space(
 /// | IN | _size_ | Size of the region |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#InvalidateProcessDataCache>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_invalidate_process_data_cache(
     process: Handle,
     address: *mut c_void,
     size: usize,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x5D",           // Issue the SVC call with immediate value 0x5D
-        in("x0") process,     // Input: process in register x0
-        in("x1") address,     // Input: address in register x1
-        in("x2") size,        // Input: size in register x2
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x5D",           // Issue the SVC call with immediate value 0x5D
+            in("x0") process,     // Input: process in register x0
+            in("x1") address,     // Input: address in register x1
+            in("x2") size,        // Input: size in register x2
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3228,21 +3410,23 @@ pub unsafe extern "C" fn __nx_svc_invalidate_process_data_cache(
 /// | IN | _size_ | Size of the region |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#StoreProcessDataCache>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_store_process_data_cache(
     process: Handle,
     address: *mut c_void,
     size: usize,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x5E",           // Issue the SVC call with immediate value 0x5E
-        in("x0") process,     // Input: process in register x0
-        in("x1") address,     // Input: address in register x1
-        in("x2") size,        // Input: size in register x2
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x5E",           // Issue the SVC call with immediate value 0x5E
+            in("x0") process,     // Input: process in register x0
+            in("x1") address,     // Input: address in register x1
+            in("x2") size,        // Input: size in register x2
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3259,21 +3443,23 @@ pub unsafe extern "C" fn __nx_svc_store_process_data_cache(
 /// | IN | _size_ | Size of the region |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#FlushProcessDataCache>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_flush_process_data_cache(
     process: Handle,
     address: *mut c_void,
     size: usize,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x5F",           // Issue the SVC call with immediate value 0x5F
-        in("x0") process,     // Input: process in register x0
-        in("x1") address,     // Input: address in register x1
-        in("x2") size,        // Input: size in register x2
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x5F",           // Issue the SVC call with immediate value 0x5F
+            in("x0") process,     // Input: process in register x0
+            in("x1") address,     // Input: address in register x1
+            in("x2") size,        // Input: size in register x2
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3293,22 +3479,24 @@ pub unsafe extern "C" fn __nx_svc_flush_process_data_cache(
 /// | IN | _process_id_ | Process ID to debug |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#DebugActiveProcess>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_debug_active_process(
     debug: *mut Handle,
     process_id: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x60",            // Issue the SVC call with immediate value 0x60
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") debug,        // Input: debug in register x0
-        in("x1") process_id,   // Input: process_id in register x1
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x60",            // Issue the SVC call with immediate value 0x60
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") debug,        // Input: debug in register x0
+            in("x1") process_id,   // Input: process_id in register x1
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3323,15 +3511,17 @@ pub unsafe extern "C" fn __nx_svc_debug_active_process(
 /// | IN | _debug_ | Debug handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#BreakDebugProcess>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_break_debug_process(debug: Handle) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x61",           // Issue the SVC call with immediate value 0x61
-        in("x0") debug,       // Input: debug in register x0
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x61",           // Issue the SVC call with immediate value 0x61
+            in("x0") debug,       // Input: debug in register x0
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3346,15 +3536,17 @@ pub unsafe extern "C" fn __nx_svc_break_debug_process(debug: Handle) -> Result {
 /// | IN | _debug_ | Debug handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#TerminateDebugProcess>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_terminate_debug_process(debug: Handle) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x62",           // Issue the SVC call with immediate value 0x62
-        in("x0") debug,       // Input: debug in register x0
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x62",           // Issue the SVC call with immediate value 0x62
+            in("x0") debug,       // Input: debug in register x0
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3370,16 +3562,18 @@ pub unsafe extern "C" fn __nx_svc_terminate_debug_process(debug: Handle) -> Resu
 /// | IN | _debug_ | Debug handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetDebugEvent>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_debug_event(event: *mut c_void, debug: Handle) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x63",           // Issue the SVC call with immediate value 0x63
-        in("x0") event,       // Input: event in register x0
-        in("x1") debug,       // Input: debug in register x1
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x63",           // Issue the SVC call with immediate value 0x63
+            in("x0") event,       // Input: event in register x0
+            in("x1") debug,       // Input: debug in register x1
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3397,7 +3591,7 @@ pub unsafe extern "C" fn __nx_svc_get_debug_event(event: *mut c_void, debug: Han
 /// | IN | _num_tids_ | Number of thread IDs |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ContinueDebugEvent>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_continue_debug_event(
     debug: Handle,
     flags: u32,
@@ -3405,15 +3599,17 @@ pub unsafe extern "C" fn __nx_svc_continue_debug_event(
     num_tids: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x64",           // Issue the SVC call with immediate value 0x64
-        in("x0") debug,       // Input: debug in register x0
-        in("x1") flags,       // Input: flags in register x1
-        in("x2") tid_list,    // Input: tid_list in register x2
-        in("x3") num_tids,    // Input: num_tids in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x64",           // Issue the SVC call with immediate value 0x64
+            in("x0") debug,       // Input: debug in register x0
+            in("x1") flags,       // Input: flags in register x1
+            in("x2") tid_list,    // Input: tid_list in register x2
+            in("x3") num_tids,    // Input: num_tids in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3430,21 +3626,23 @@ pub unsafe extern "C" fn __nx_svc_continue_debug_event(
 /// | IN | _thread_id_ | Thread ID |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ContinueDebugEvent>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_legacy_continue_debug_event(
     debug: Handle,
     flags: u32,
     thread_id: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x64",           // Issue the SVC call with immediate value 0x64
-        in("x0") debug,       // Input: debug in register x0
-        in("x1") flags,       // Input: flags in register x1
-        in("x2") thread_id,   // Input: thread_id in register x2
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x64",           // Issue the SVC call with immediate value 0x64
+            in("x0") debug,       // Input: debug in register x0
+            in("x1") flags,       // Input: flags in register x1
+            in("x2") thread_id,   // Input: thread_id in register x2
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3471,24 +3669,26 @@ pub unsafe extern "C" fn __nx_svc_legacy_continue_debug_event(
 /// | IN | _max_pids_count_ | Maximum number of process IDs to write |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetProcessList>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_process_list(
     pids_count: *mut i32,
     pids_list: *mut u64,
     max_pids_count: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!",   // Store x0 on the stack
-        "svc 0x65",              // Issue the SVC call with immediate value 0x65
-        "ldr x2, [sp], #16",     // Load x2 from the stack
-        "str w1, [x2]",          // Store w1 in the memory pointed to by x2
-        in("x0") pids_count,     // Input: pids_count in register x0
-        in("x1") pids_list,      // Input: pids_list in register x1
-        in("x2") max_pids_count, // Input: max_pids_count in register x2
-        lateout("w0") result,    // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!",   // Store x0 on the stack
+            "svc 0x65",              // Issue the SVC call with immediate value 0x65
+            "ldr x2, [sp], #16",     // Load x2 from the stack
+            "str w1, [x2]",          // Store w1 in the memory pointed to by x2
+            in("x0") pids_count,     // Input: pids_count in register x0
+            in("x1") pids_list,      // Input: pids_list in register x1
+            in("x2") max_pids_count, // Input: max_pids_count in register x2
+            lateout("w0") result,    // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3506,7 +3706,7 @@ pub unsafe extern "C" fn __nx_svc_get_process_list(
 /// | IN | _debug_ | Debug handle, or 0 to use the current process |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetThreadList>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_thread_list(
     num_out: *mut i32,
     tids_out: *mut u64,
@@ -3514,18 +3714,20 @@ pub unsafe extern "C" fn __nx_svc_get_thread_list(
     debug: Handle,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x66",            // Issue the SVC call with immediate value 0x66
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") num_out,      // Input: num_out in register x0
-        in("x1") tids_out,     // Input: tids_out in register x1
-        in("x2") max_tids,     // Input: max_tids in register x2
-        in("x3") debug,        // Input: debug in register x3
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x66",            // Issue the SVC call with immediate value 0x66
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") num_out,      // Input: num_out in register x0
+            in("x1") tids_out,     // Input: tids_out in register x1
+            in("x2") max_tids,     // Input: max_tids in register x2
+            in("x3") debug,        // Input: debug in register x3
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3547,7 +3749,7 @@ pub unsafe extern "C" fn __nx_svc_get_thread_list(
 /// | IN | _flags_ | Context flags |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetDebugThreadContext>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_debug_thread_context(
     ctx: *mut ThreadContext,
     debug: Handle,
@@ -3555,15 +3757,17 @@ pub unsafe extern "C" fn __nx_svc_get_debug_thread_context(
     flags: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x67",           // Issue the SVC call with immediate value 0x67
-        in("x0") ctx,         // Input: ctx in register x0
-        in("x1") debug,       // Input: debug in register x1
-        in("x2") thread_id,   // Input: thread_id in register x2
-        in("x3") flags,       // Input: flags in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x67",           // Issue the SVC call with immediate value 0x67
+            in("x0") ctx,         // Input: ctx in register x0
+            in("x1") debug,       // Input: debug in register x1
+            in("x2") thread_id,   // Input: thread_id in register x2
+            in("x3") flags,       // Input: flags in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3581,7 +3785,7 @@ pub unsafe extern "C" fn __nx_svc_get_debug_thread_context(
 /// | IN | _flags_ | Context flags |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetDebugThreadContext>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_set_debug_thread_context(
     debug: Handle,
     thread_id: u64,
@@ -3589,15 +3793,17 @@ pub unsafe extern "C" fn __nx_svc_set_debug_thread_context(
     flags: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x68",           // Issue the SVC call with immediate value 0x68
-        in("x0") debug,       // Input: debug in register x0
-        in("x1") thread_id,   // Input: thread_id in register x1
-        in("x2") ctx,         // Input: ctx in register x2
-        in("x3") flags,       // Input: flags in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x68",           // Issue the SVC call with immediate value 0x68
+            in("x0") debug,       // Input: debug in register x0
+            in("x1") thread_id,   // Input: thread_id in register x1
+            in("x2") ctx,         // Input: ctx in register x2
+            in("x3") flags,       // Input: flags in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3615,7 +3821,7 @@ pub unsafe extern "C" fn __nx_svc_set_debug_thread_context(
 /// | IN | _addr_ | Address to query |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#QueryDebugProcessMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_query_debug_process_memory(
     meminfo_ptr: *mut MemoryInfo,
     pageinfo: *mut u32,
@@ -3623,18 +3829,20 @@ pub unsafe extern "C" fn __nx_svc_query_debug_process_memory(
     addr: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x1, [sp, #-16]!", // Store x1 on the stack
-        "svc 0x69",            // Issue the SVC call with immediate value 0x69
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") meminfo_ptr,  // Input: meminfo_ptr in register x0
-        in("x1") pageinfo,     // Input: pageinfo in register x1
-        in("x2") debug,        // Input: debug in register x2
-        in("x3") addr,         // Input: addr in register x3
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x1, [sp, #-16]!", // Store x1 on the stack
+            "svc 0x69",            // Issue the SVC call with immediate value 0x69
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") meminfo_ptr,  // Input: meminfo_ptr in register x0
+            in("x1") pageinfo,     // Input: pageinfo in register x1
+            in("x2") debug,        // Input: debug in register x2
+            in("x3") addr,         // Input: addr in register x3
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3652,7 +3860,7 @@ pub unsafe extern "C" fn __nx_svc_query_debug_process_memory(
 /// | IN | _size_ | Size to read |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ReadDebugProcessMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_read_debug_process_memory(
     buffer: *mut c_void,
     debug: Handle,
@@ -3660,15 +3868,17 @@ pub unsafe extern "C" fn __nx_svc_read_debug_process_memory(
     size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x6A",           // Issue the SVC call with immediate value 0x6A
-        in("x0") buffer,      // Input: buffer in register x0
-        in("x1") debug,       // Input: debug in register x1
-        in("x2") addr,        // Input: addr in register x2
-        in("x3") size,        // Input: size in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x6A",           // Issue the SVC call with immediate value 0x6A
+            in("x0") buffer,      // Input: buffer in register x0
+            in("x1") debug,       // Input: debug in register x1
+            in("x2") addr,        // Input: addr in register x2
+            in("x3") size,        // Input: size in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3686,7 +3896,7 @@ pub unsafe extern "C" fn __nx_svc_read_debug_process_memory(
 /// | IN | _size_ | Size to write |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#WriteDebugProcessMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_write_debug_process_memory(
     debug: Handle,
     buffer: *const c_void,
@@ -3694,15 +3904,17 @@ pub unsafe extern "C" fn __nx_svc_write_debug_process_memory(
     size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x6B",           // Issue the SVC call with immediate value 0x6B
-        in("x0") debug,       // Input: debug in register x0
-        in("x1") buffer,      // Input: buffer in register x1
-        in("x2") addr,        // Input: addr in register x2
-        in("x3") size,        // Input: size in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x6B",           // Issue the SVC call with immediate value 0x6B
+            in("x0") debug,       // Input: debug in register x0
+            in("x1") buffer,      // Input: buffer in register x1
+            in("x2") addr,        // Input: addr in register x2
+            in("x3") size,        // Input: size in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3719,21 +3931,23 @@ pub unsafe extern "C" fn __nx_svc_write_debug_process_memory(
 /// | IN | _value_ | Breakpoint value |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetHardwareBreakPoint>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_set_hardware_breakpoint(
     which: u32,
     flags: u64,
     value: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x6C",           // Issue the SVC call with immediate value 0x6C
-        in("x0") which,       // Input: which in register x0
-        in("x1") flags,       // Input: flags in register x1
-        in("x2") value,       // Input: value in register x2
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x6C",           // Issue the SVC call with immediate value 0x6C
+            in("x0") which,       // Input: which in register x0
+            in("x1") flags,       // Input: flags in register x1
+            in("x2") value,       // Input: value in register x2
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3752,7 +3966,7 @@ pub unsafe extern "C" fn __nx_svc_set_hardware_breakpoint(
 /// | IN | _param_ | Parameter to get |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetDebugThreadParam>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_debug_thread_param(
     out_64: *mut u64,
     out_32: *mut u32,
@@ -3761,20 +3975,22 @@ pub unsafe extern "C" fn __nx_svc_get_debug_thread_param(
     param: DebugThreadParam,
 ) -> Result {
     let result: Result;
-    asm!(
-        "stp x0, x1, [sp, #-16]!", // Store x0 and x1 on the stack
-        "svc 0x6D",                // Issue the SVC call with immediate value 0x6D
-        "ldp x3, x4, [sp], #16",   // Load x3 and x4 from the stack
-        "str x1, [x3]",            // Store x1 in the memory pointed to by x3
-        "str w2, [x4]",            // Store w2 in the memory pointed to by x4
-        in("x0") out_64,           // Input: out_64 in register x0
-        in("x1") out_32,           // Input: out_32 in register x1
-        in("x2") debug,            // Input: debug in register x2
-        in("x3") thread_id,        // Input: thread_id in register x3
-        in("x4") param as u32,     // Input: param in register x4
-        lateout("w0") result,      // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "stp x0, x1, [sp, #-16]!", // Store x0 and x1 on the stack
+            "svc 0x6D",                // Issue the SVC call with immediate value 0x6D
+            "ldp x3, x4, [sp], #16",   // Load x3 and x4 from the stack
+            "str x1, [x3]",            // Store x1 in the memory pointed to by x3
+            "str w2, [x4]",            // Store w2 in the memory pointed to by x4
+            in("x0") out_64,           // Input: out_64 in register x0
+            in("x1") out_32,           // Input: out_32 in register x1
+            in("x2") debug,            // Input: debug in register x2
+            in("x3") thread_id,        // Input: thread_id in register x3
+            in("x4") param as u32,     // Input: param in register x4
+            lateout("w0") result,      // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3796,7 +4012,7 @@ pub unsafe extern "C" fn __nx_svc_get_debug_thread_param(
 /// | IN | _id1_ | Second ID |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetSystemInfo>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_system_info(
     out: *mut u64,
     id0: u64,
@@ -3804,18 +4020,20 @@ pub unsafe extern "C" fn __nx_svc_get_system_info(
     id1: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x6F",            // Issue the SVC call with immediate value 0x6F
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str x1, [x2]",        // Store x1 in the memory pointed to by x2
-        in("x0") out,          // Input: out in register x0
-        in("x1") id0,          // Input: id0 in register x1
-        in("x2") handle,       // Input: handle in register x2
-        in("x3") id1,          // Input: id1 in register x3
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x6F",            // Issue the SVC call with immediate value 0x6F
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str x1, [x2]",        // Store x1 in the memory pointed to by x2
+            in("x0") out,          // Input: out in register x0
+            in("x1") id0,          // Input: id0 in register x1
+            in("x2") handle,       // Input: handle in register x2
+            in("x3") id1,          // Input: id1 in register x3
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3838,7 +4056,7 @@ pub unsafe extern "C" fn __nx_svc_get_system_info(
 /// | IN | _name_ | Name of the port |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreatePort>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_create_port(
     port_server: *mut Handle,
     port_client: *mut Handle,
@@ -3847,20 +4065,22 @@ pub unsafe extern "C" fn __nx_svc_create_port(
     name: *const c_char,
 ) -> Result {
     let result: Result;
-    asm!(
-        "stp x0, x1, [sp, #-16]!", // Store x0 and x1 on the stack
-        "svc 0x70",                // Issue the SVC call with immediate value 0x70
-        "ldp x3, x4, [sp], #16",   // Load x3 and x4 from the stack
-        "str w1, [x3]",            // Store w1 in the memory pointed to by x3
-        "str w2, [x4]",            // Store w2 in the memory pointed to by x4
-        in("x0") port_server,      // Input: port_server in register x0
-        in("x1") port_client,      // Input: port_client in register x1
-        in("x2") max_sessions,     // Input: max_sessions in register x2
-        in("x3") is_light as u32,  // Input: is_light in register x3
-        in("x4") name,             // Input: name in register x4
-        lateout("w0") result,      // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "stp x0, x1, [sp, #-16]!", // Store x0 and x1 on the stack
+            "svc 0x70",                // Issue the SVC call with immediate value 0x70
+            "ldp x3, x4, [sp], #16",   // Load x3 and x4 from the stack
+            "str w1, [x3]",            // Store w1 in the memory pointed to by x3
+            "str w2, [x4]",            // Store w2 in the memory pointed to by x4
+            in("x0") port_server,      // Input: port_server in register x0
+            in("x1") port_client,      // Input: port_client in register x1
+            in("x2") max_sessions,     // Input: max_sessions in register x2
+            in("x3") is_light as u32,  // Input: is_light in register x3
+            in("x4") name,             // Input: name in register x4
+            lateout("w0") result,      // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3877,24 +4097,26 @@ pub unsafe extern "C" fn __nx_svc_create_port(
 /// | IN | _max_sessions_ | Maximum number of sessions |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ManageNamedPort>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_manage_named_port(
     port_server: *mut Handle,
     name: *const c_char,
     max_sessions: i32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x71",            // Issue the SVC call with immediate value 0x71
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") port_server,  // Input: port_server in register x0
-        in("x1") name,         // Input: name in register x1
-        in("x2") max_sessions, // Input: max_sessions in register x2
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x71",            // Issue the SVC call with immediate value 0x71
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") port_server,  // Input: port_server in register x0
+            in("x1") name,         // Input: name in register x1
+            in("x2") max_sessions, // Input: max_sessions in register x2
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3910,19 +4132,21 @@ pub unsafe extern "C" fn __nx_svc_manage_named_port(
 /// | IN | _port_ | Port handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ConnectToPort>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_connect_to_port(session: *mut Handle, port: Handle) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x72",            // Issue the SVC call with immediate value 0x72
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") session,      // Input: session in register x0
-        in("x1") port,         // Input: port in register x1
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x72",            // Issue the SVC call with immediate value 0x72
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") session,      // Input: session in register x0
+            in("x1") port,         // Input: port in register x1
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3944,7 +4168,7 @@ pub unsafe extern "C" fn __nx_svc_connect_to_port(session: *mut Handle, port: Ha
 /// | IN | _perm_ | New memory permissions |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetProcessMemoryPermission>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_set_process_memory_permission(
     proc: Handle,
     addr: u64,
@@ -3952,15 +4176,17 @@ pub unsafe extern "C" fn __nx_svc_set_process_memory_permission(
     perm: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x73",           // Issue the SVC call with immediate value 0x73
-        in("x0") proc,        // Input: proc in register x0
-        in("x1") addr,        // Input: addr in register x1
-        in("x2") size,        // Input: size in register x2
-        in("x3") perm,        // Input: perm in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x73",           // Issue the SVC call with immediate value 0x73
+            in("x0") proc,        // Input: proc in register x0
+            in("x1") addr,        // Input: addr in register x1
+            in("x2") size,        // Input: size in register x2
+            in("x3") perm,        // Input: perm in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -3978,7 +4204,7 @@ pub unsafe extern "C" fn __nx_svc_set_process_memory_permission(
 /// | IN | _size_ | Size of the memory to map |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapProcessMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_map_process_memory(
     dst: *mut c_void,
     proc: Handle,
@@ -3986,15 +4212,17 @@ pub unsafe extern "C" fn __nx_svc_map_process_memory(
     size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x74",           // Issue the SVC call with immediate value 0x74
-        in("x0") dst,         // Input: dst in register x0
-        in("x1") proc,        // Input: proc in register x1
-        in("x2") src,         // Input: src in register x2
-        in("x3") size,        // Input: size in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x74",           // Issue the SVC call with immediate value 0x74
+            in("x0") dst,         // Input: dst in register x0
+            in("x1") proc,        // Input: proc in register x1
+            in("x2") src,         // Input: src in register x2
+            in("x3") size,        // Input: size in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -4012,7 +4240,7 @@ pub unsafe extern "C" fn __nx_svc_map_process_memory(
 /// | IN | _size_ | Size of the memory |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapProcessMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_unmap_process_memory(
     dst: *mut c_void,
     proc: Handle,
@@ -4020,15 +4248,17 @@ pub unsafe extern "C" fn __nx_svc_unmap_process_memory(
     size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x75",           // Issue the SVC call with immediate value 0x75
-        in("x0") dst,         // Input: dst in register x0
-        in("x1") proc,        // Input: proc in register x1
-        in("x2") src,         // Input: src in register x2
-        in("x3") size,        // Input: size in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x75",           // Issue the SVC call with immediate value 0x75
+            in("x0") dst,         // Input: dst in register x0
+            in("x1") proc,        // Input: proc in register x1
+            in("x2") src,         // Input: src in register x2
+            in("x3") size,        // Input: size in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -4050,7 +4280,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_process_memory(
 /// | IN | _addr_ | Address to query |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#QueryProcessMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_query_process_memory(
     meminfo_ptr: *mut MemoryInfo,
     pageinfo: *mut u32,
@@ -4058,18 +4288,20 @@ pub unsafe extern "C" fn __nx_svc_query_process_memory(
     addr: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x1, [sp, #-16]!", // Store x1 on the stack
-        "svc 0x76",            // Issue the SVC call with immediate value 0x76
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") meminfo_ptr,  // Input: meminfo_ptr in register x0
-        in("x1") pageinfo,     // Input: pageinfo in register x1
-        in("x2") proc,         // Input: proc in register x2
-        in("x3") addr,         // Input: addr in register x3
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x1, [sp, #-16]!", // Store x1 on the stack
+            "svc 0x76",            // Issue the SVC call with immediate value 0x76
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") meminfo_ptr,  // Input: meminfo_ptr in register x0
+            in("x1") pageinfo,     // Input: pageinfo in register x1
+            in("x2") proc,         // Input: proc in register x2
+            in("x3") addr,         // Input: addr in register x3
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -4091,7 +4323,7 @@ pub unsafe extern "C" fn __nx_svc_query_process_memory(
 /// | IN | _size_ | Size of the mapping |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapProcessCodeMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_map_process_code_memory(
     proc: Handle,
     dst: u64,
@@ -4099,15 +4331,17 @@ pub unsafe extern "C" fn __nx_svc_map_process_code_memory(
     size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x77",            // Issue the SVC call with immediate value 0x77
-        in("x0") proc,         // Input: proc in register x0
-        in("x1") dst,          // Input: dst in register x1
-        in("x2") src,          // Input: src in register x2
-        in("x3") size,         // Input: size in register x3
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x77",            // Issue the SVC call with immediate value 0x77
+            in("x0") proc,         // Input: proc in register x0
+            in("x1") dst,          // Input: dst in register x1
+            in("x2") src,          // Input: src in register x2
+            in("x3") size,         // Input: size in register x3
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -4129,7 +4363,7 @@ pub unsafe extern "C" fn __nx_svc_map_process_code_memory(
 /// | IN | _size_ | Size of the mapping |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapProcessCodeMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_unmap_process_code_memory(
     proc: Handle,
     dst: u64,
@@ -4137,15 +4371,17 @@ pub unsafe extern "C" fn __nx_svc_unmap_process_code_memory(
     size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x78",           // Issue the SVC call with immediate value 0x78
-        in("x0") proc,        // Input: proc in register x0
-        in("x1") dst,         // Input: dst in register x1
-        in("x2") src,         // Input: src in register x2
-        in("x3") size,        // Input: size in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x78",           // Issue the SVC call with immediate value 0x78
+            in("x0") proc,        // Input: proc in register x0
+            in("x1") dst,         // Input: dst in register x1
+            in("x2") src,         // Input: src in register x2
+            in("x3") size,        // Input: size in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -4171,7 +4407,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_process_code_memory(
 /// | IN | _cap_num_ | Number of kernel capabilities |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateProcess>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_create_process(
     out: *mut Handle,
     proc_info: *const u8,
@@ -4179,18 +4415,20 @@ pub unsafe extern "C" fn __nx_svc_create_process(
     cap_num: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x79",            // Issue the SVC call with immediate value 0x79
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") out,          // Input: out in register x0
-        in("x1") proc_info,    // Input: proc_info in register x1
-        in("x2") caps,         // Input: caps in register x2
-        in("x3") cap_num,      // Input: cap_num in register x3
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x79",            // Issue the SVC call with immediate value 0x79
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") out,          // Input: out in register x0
+            in("x1") proc_info,    // Input: proc_info in register x1
+            in("x2") caps,         // Input: caps in register x2
+            in("x3") cap_num,      // Input: cap_num in register x3
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -4210,7 +4448,7 @@ pub unsafe extern "C" fn __nx_svc_create_process(
 /// | IN | _stack_size_ | Stack size for the main thread |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#StartProcess>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_start_process(
     proc: Handle,
     main_prio: i32,
@@ -4218,15 +4456,17 @@ pub unsafe extern "C" fn __nx_svc_start_process(
     stack_size: u32,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x7A",           // Issue the SVC call with immediate value 0x7A
-        in("x0") proc,        // Input: proc in register x0
-        in("x1") main_prio,   // Input: main_prio in register x1
-        in("x2") default_cpu, // Input: default_cpu in register x2
-        in("x3") stack_size,  // Input: stack_size in register x3
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x7A",           // Issue the SVC call with immediate value 0x7A
+            in("x0") proc,        // Input: proc in register x0
+            in("x1") main_prio,   // Input: main_prio in register x1
+            in("x2") default_cpu, // Input: default_cpu in register x2
+            in("x3") stack_size,  // Input: stack_size in register x3
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -4245,15 +4485,17 @@ pub unsafe extern "C" fn __nx_svc_start_process(
 /// | IN | _proc_ | Handle of the process to terminate |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#TerminateProcess>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_terminate_process(proc: Handle) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x7B",           // Issue the SVC call with immediate value 0x7B
-        in("x0") proc,        // Input: proc in register x0
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x7B",           // Issue the SVC call with immediate value 0x7B
+            in("x0") proc,        // Input: proc in register x0
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -4274,24 +4516,26 @@ pub unsafe extern "C" fn __nx_svc_terminate_process(proc: Handle) -> Result {
 /// | IN | _which_ | Type of information to retrieve |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetProcessInfo>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_get_process_info(
     out: *mut i64,
     proc: Handle,
     which: ProcessInfoType,
 ) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x7C",            // Issue the SVC call with immediate value 0x7C
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") out,          // Input: out in register x0
-        in("x1") proc,         // Input: proc in register x1
-        in("x2") which as u32, // Input: which in register x2
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x7C",            // Issue the SVC call with immediate value 0x7C
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") out,          // Input: out in register x0
+            in("x1") proc,         // Input: proc in register x1
+            in("x2") which as u32, // Input: which in register x2
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -4310,18 +4554,20 @@ pub unsafe extern "C" fn __nx_svc_get_process_info(
 /// | OUT | _out_ | Output resource limit handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateResourceLimit>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_create_resource_limit(out: *mut Handle) -> Result {
     let result: Result;
-    asm!(
-        "str x0, [sp, #-16]!", // Store x0 on the stack
-        "svc 0x7D",            // Issue the SVC call with immediate value 0x7D
-        "ldr x2, [sp], #16",   // Load x2 from the stack
-        "str w1, [x2]",        // Store w1 in the memory pointed to by x2
-        in("x0") out,          // Input: out in register x0
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!", // Store x0 on the stack
+            "svc 0x7D",            // Issue the SVC call with immediate value 0x7D
+            "ldr x2, [sp], #16",   // Load x2 from the stack
+            "str w1, [x2]",        // Store w1 in the memory pointed to by x2
+            in("x0") out,          // Input: out in register x0
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -4338,21 +4584,23 @@ pub unsafe extern "C" fn __nx_svc_create_resource_limit(out: *mut Handle) -> Res
 /// | IN | _value_ | Value to set |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetResourceLimitLimitValue>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_set_resource_limit_limit_value(
     reslimit: Handle,
     which: LimitableResource,
     value: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x7E",            // Issue the SVC call with immediate value 0x7E
-        in("x0") reslimit,     // Input: reslimit in register x0
-        in("x1") which as u32, // Input: which in register x1
-        in("x2") value,        // Input: value in register x2
-        lateout("w0") result,  // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x7E",            // Issue the SVC call with immediate value 0x7E
+            in("x0") reslimit,     // Input: reslimit in register x0
+            in("x1") which as u32, // Input: which in register x1
+            in("x2") value,        // Input: value in register x2
+            lateout("w0") result,  // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -4375,24 +4623,26 @@ pub unsafe extern "C" fn __nx_svc_set_resource_limit_limit_value(
 /// | IN | _regs_ | Arguments to pass to the secure monitor |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CallSecureMonitor>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_call_secure_monitor(regs: *mut SecmonArgs) {
-    asm!(
-        "str x0, [sp, #-16]!",     // Store x0 on the stack
-        "mov x8, x0",              // Move regs pointer to x8
-        "ldp x0, x1, [x8]",        // Load first pair of args
-        "ldp x2, x3, [x8, #0x10]", // Load second pair
-        "ldp x4, x5, [x8, #0x20]", // Load third pair
-        "ldp x6, x7, [x8, #0x30]", // Load fourth pair
-        "svc 0x7F",                // Issue the SVC call
-        "ldr x8, [sp], #16",       // Restore regs pointer
-        "stp x0, x1, [x8]",        // Store first pair of results
-        "stp x2, x3, [x8, #0x10]", // Store second pair
-        "stp x4, x5, [x8, #0x20]", // Store third pair
-        "stp x6, x7, [x8, #0x30]", // Store fourth pair
-        in("x0") regs,             // Input: regs pointer in x0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "str x0, [sp, #-16]!",     // Store x0 on the stack
+            "mov x8, x0",              // Move regs pointer to x8
+            "ldp x0, x1, [x8]",        // Load first pair of args
+            "ldp x2, x3, [x8, #0x10]", // Load second pair
+            "ldp x4, x5, [x8, #0x20]", // Load third pair
+            "ldp x6, x7, [x8, #0x30]", // Load fourth pair
+            "svc 0x7F",                // Issue the SVC call
+            "ldr x8, [sp], #16",       // Restore regs pointer
+            "stp x0, x1, [x8]",        // Store first pair of results
+            "stp x2, x3, [x8, #0x10]", // Store second pair
+            "stp x4, x5, [x8, #0x20]", // Store third pair
+            "stp x6, x7, [x8, #0x30]", // Store fourth pair
+            in("x0") regs,             // Input: regs pointer in x0
+            options(nostack)
+        );
+    }
 }
 
 //</editor-fold>
@@ -4411,19 +4661,21 @@ pub unsafe extern "C" fn __nx_svc_call_secure_monitor(regs: *mut SecmonArgs) {
 /// | IN | _size_ | Size of memory to map |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#:~:text=0x90,MapInsecurePhysicalMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_map_insecure_physical_memory(
     address: *mut c_void,
     size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x90",           // Issue the SVC call with immediate value 0x90
-        in("x0") address,     // Input: address in register x0
-        in("x1") size,        // Input: size in register x1
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x90",           // Issue the SVC call with immediate value 0x90
+            in("x0") address,     // Input: address in register x0
+            in("x1") size,        // Input: size in register x1
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
@@ -4439,19 +4691,21 @@ pub unsafe extern "C" fn __nx_svc_map_insecure_physical_memory(
 /// | IN | _size_ | Size of memory to unmap |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#:~:text=0x91,UnmapInsecurePhysicalMemory>
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_svc_unmap_insecure_physical_memory(
     address: *mut c_void,
     size: u64,
 ) -> Result {
     let result: Result;
-    asm!(
-        "svc 0x91",           // Issue the SVC call with immediate value 0x91
-        in("x0") address,     // Input: address in register x0
-        in("x1") size,        // Input: size in register x1
-        lateout("w0") result, // Output: Capture result from w0
-        options(nostack)
-    );
+    unsafe {
+        asm!(
+            "svc 0x91",           // Issue the SVC call with immediate value 0x91
+            in("x0") address,     // Input: address in register x0
+            in("x1") size,        // Input: size in register x1
+            lateout("w0") result, // Output: Capture result from w0
+            options(nostack)
+        );
+    }
     result
 }
 
