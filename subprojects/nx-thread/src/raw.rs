@@ -14,10 +14,10 @@ pub const THREADVARS_MAGIC: u32 = 0x21545624; // ASCII: !TV$
 /// - [Switchbrew Wiki: Thread-Local Region](https://switchbrew.org/wiki/Thread_Local_Region)
 const TLR_SIZE: usize = 0x200;
 
-/// Size of the `ThreadVars` structure
+/// Size of the [`ThreadVars`] structure
 const THREAD_VARS_SIZE: usize = 0x20;
 
-/// ThreadVars structure
+/// Thread vars structure
 ///
 /// This structure is stored at the end of the thread's TLS segment.
 ///

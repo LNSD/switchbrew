@@ -25,7 +25,9 @@
 #![no_std]
 
 pub mod code;
+pub mod debug;
 pub mod raw;
+pub mod sync;
 
 /// #[panic_handler]
 ///

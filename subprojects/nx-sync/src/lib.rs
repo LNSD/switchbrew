@@ -1,6 +1,8 @@
+//! # nx-sync
+
 #![no_std]
 
-pub mod raw;
+pub mod mutex;
 
 /// #[panic_handler]
 ///

@@ -1,0 +1,23 @@
+[package]
+name = "nx-sync"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "nx_sync"
+crate-type = ["staticlib"]
+test = false
+doctest = false
+bench = false
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+
+[dependencies]
+nx-svc = { version = "0.1.0", path = "../nx-svc" }
+nx-thread = { version = "0.1.0", path = "../nx-thread" }
+panic-abort = "0.3.2"
+panic-halt = "1.0.0"
