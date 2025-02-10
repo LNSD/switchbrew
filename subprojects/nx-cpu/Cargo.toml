@@ -5,7 +5,7 @@ edition = "2024"
 
 [lib]
 name = "nx_cpu"
-crate-type = ["staticlib"]
+crate-type = ["rlib", "staticlib"]
 test = false
 doctest = false
 bench = false

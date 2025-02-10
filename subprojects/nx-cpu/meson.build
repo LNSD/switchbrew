@@ -18,6 +18,7 @@ nx_cpu_tgt = custom_target(
     ],
     output : 'libnx_cpu.a',
     build_by_default : true,
+    build_always_stale: true,
 )
 
 nx_cpu_dep = declare_dependency(
