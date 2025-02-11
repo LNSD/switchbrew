@@ -1,6 +1,11 @@
+//! Synchronization primitives
+
 use crate::{
-    error::KernelError,
-    raw::{__nx_svc_arbitrate_lock, __nx_svc_arbitrate_unlock, Handle},
+    error::{KernelError, ResultCode, ToRawResultCode},
+    raw::{
+        __nx_svc_arbitrate_lock, __nx_svc_arbitrate_unlock, __nx_svc_signal_process_wide_key,
+        __nx_svc_wait_process_wide_key_atomic, Handle,
+    },
     result::{Error, Result, raw},
 };
 
@@ -11,7 +16,7 @@ use crate::{
 /// are waiting.
 pub const HANDLE_WAIT_MASK: u32 = 0x40000000;
 
-/// Arbitrates a mutex lock operation in userspace.
+/// Arbitrates a mutex lock operation in userspace
 ///
 /// Attempts to acquire a mutex by arbitrating the lock with the owner thread.
 ///
@@ -87,7 +92,7 @@ pub enum ArbitrateLockError {
     Unknown(Error),
 }
 
-/// Arbitrates a mutex unlock operation in userspace.
+/// Arbitrates a mutex unlock operation in userspace
 ///
 /// Releases a mutex by arbitrating the unlock operation with waiting threads.
 ///
@@ -139,4 +144,133 @@ pub enum ArbitrateUnlockError {
     /// This variant is used when the error code is not recognized.
     #[error("Unknown error: {0}")]
     Unknown(Error),
+}
+
+/// Atomically releases a mutex and waits on a condition variable
+///
+/// Atomically releases the mutex and suspends the current thread until the condition variable is
+/// signaled or a timeout occurs.
+///
+/// # Arguments
+/// | Arg | Name | Description |
+/// | --- | --- | --- |
+/// | IN | _condvar_ | Pointer to the condition variable in userspace memory. |
+/// | IN | _mutex_ | Pointer to the mutex raw tag value in userspace memory. |
+/// | IN | _tag_ | The thread handle value associated with the mutex. |
+/// | IN | _timeout_ns_ | Timeout in nanoseconds. Use 0 for no timeout, -1 for infinite wait. |
+///
+/// # Behavior
+/// This function calls the [`__nx_svc_wait_process_wide_key_atomic`] syscall with the provided arguments.
+///
+/// Then the kernel will:
+/// 1. Validate the current thread's state and memory access
+/// 2. Release the mutex (updating mutex value and waking waiters)
+/// 3. Add the current thread to the condition variable's waiter list
+/// 4. Pause the current thread until either:
+///    - The condition variable is signaled
+///    - The timeout expires (if timeout > 0)
+///    - The thread is terminated
+/// 5. Remove thread from condition variable waiter list upon wake-up
+/// 6. Re-acquire the mutex before returning
+///
+/// # Notes
+/// - This is a blocking operation that will pause the current thread
+/// - The mutex must be held by the current thread before calling this function
+/// - The operation is atomic - no other thread can acquire the mutex between release and wait
+/// - If timeout is 0, returns immediately after releasing mutex
+/// - If timeout is -1, waits indefinitely
+///
+/// # Safety
+/// This function is unsafe because it:
+/// - Dereferences raw pointers (`mutex` and `condvar`)
+/// - Interacts directly with thread scheduling and kernel synchronization primitives
+pub unsafe fn wait_process_wide_key_atomic(
+    condvar: *mut u32,
+    mutex: *mut u32,
+    tag: u32,
+    timeout_ns: u64,
+) -> Result<(), WaitProcessWideKeyError> {
+    let res = unsafe { __nx_svc_wait_process_wide_key_atomic(mutex, condvar, tag, timeout_ns) };
+    raw::Result::from_raw(res).map((), |rc| {
+        let desc = rc.description();
+
+        // Map kernel error codes to the appropriate error enum variant
+        if KernelError::InvalidAddress == desc {
+            WaitProcessWideKeyError::InvalidMemState
+        } else if KernelError::TerminationRequested == desc {
+            WaitProcessWideKeyError::ThreadTerminating
+        } else if KernelError::TimedOut == desc {
+            WaitProcessWideKeyError::TimedOut
+        } else {
+            WaitProcessWideKeyError::Unknown(Error::from(rc))
+        }
+    })
+}
+
+/// Error type for [`wait_process_wide_key_atomic`]
+#[derive(Debug, thiserror::Error)]
+pub enum WaitProcessWideKeyError {
+    /// The mutex or condvar memory address cannot be accessed.
+    #[error("Invalid memory state")]
+    InvalidMemState,
+    /// The current thread is marked for termination.
+    #[error("Thread terminating")]
+    ThreadTerminating,
+    /// The wait operation timed out.
+    #[error("Operation timed out")]
+    TimedOut,
+    /// An unknown error occurred.
+    ///
+    /// This variant is used when the error code is not recognized.
+    #[error("Unknown error: {0}")]
+    Unknown(Error),
+}
+
+impl ToRawResultCode for WaitProcessWideKeyError {
+    fn to_rc(self) -> ResultCode {
+        match self {
+            WaitProcessWideKeyError::InvalidMemState => KernelError::InvalidAddress.to_rc(),
+            WaitProcessWideKeyError::ThreadTerminating => KernelError::TerminationRequested.to_rc(),
+            WaitProcessWideKeyError::TimedOut => KernelError::TimedOut.to_rc(),
+            WaitProcessWideKeyError::Unknown(err) => err.to_raw(),
+        }
+    }
+}
+
+/// Signals a condition variable to wake waiting threads
+///
+/// Wakes up one or more threads waiting on the specified condition variable.
+///
+/// # Arguments
+/// | Arg | Name | Description |
+/// | --- | --- | --- |
+/// | IN | _condvar_ | Pointer to the condition variable in userspace memory. |
+/// | IN | _count_ | Number of threads to wake. If greater than the number of waiting threads, all threads are woken. If less than or equal to 0, wakes all waiting threads. |
+///
+/// # Behavior
+/// This function calls the [`__nx_svc_signal_process_wide_key`] syscall with the provided arguments.
+///
+/// Then the kernel will:
+/// 1. Select threads to wake based on:
+///    - Threads must be waiting on the specified condition variable
+///    - Threads are ordered by their dynamic priority
+///    - Up to _count_ threads are selected (or all threads if _count_ ≤ 0, e.g. -1)
+/// 2. For each selected thread:
+///    - Remove it from the condition variable's waiter list
+///    - Attempt to re-acquire its associated mutex
+/// 3. If no threads remain waiting:
+///    - Reset the condition variable value to the default value
+///
+/// # Notes
+/// - This is a non-blocking operation
+/// - If no threads are waiting on the condition variable, this is effectively a no-op
+/// - Woken threads will attempt to re-acquire their associated mutexes before resuming
+/// - Thread selection is priority-aware, favoring threads with higher dynamic priority
+///
+/// # Safety
+/// This function is unsafe because it:
+/// - Dereferences a raw pointer (`condvar`)
+/// - Interacts directly with thread scheduling and kernel synchronization primitives
+pub unsafe fn signal_process_wide_key(condvar: *mut u32, count: i32) {
+    unsafe { __nx_svc_signal_process_wide_key(condvar, count) };
 }

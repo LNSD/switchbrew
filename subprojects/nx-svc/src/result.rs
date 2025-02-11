@@ -21,7 +21,7 @@
 //! - [Switchbrew Wiki: SVC](https://switchbrew.org/wiki/SVC)
 //! - [Switchbrew Wiki: Error Codes](https://switchbrew.org/wiki/Error_codes)
 
-use crate::error::Module;
+use crate::error::{Module, ToRawResultCode};
 
 /// Type alias for Result with [`Error`] as the error type.
 ///
@@ -77,6 +77,13 @@ impl Error {
     /// Returns the raw value (`u32`) of this error code
     #[inline]
     pub const fn to_raw(self) -> ResultCode {
+        self.0.to_raw()
+    }
+}
+
+impl ToRawResultCode for Error {
+    /// Converts the error code into a raw `u32` value.
+    fn to_rc(self) -> ResultCode {
         self.0.to_raw()
     }
 }
@@ -234,6 +241,7 @@ pub(crate) mod raw {
         ///
         /// On success, returns `Ok(())`. On error, passes the [`ResultCode`] to the provided error
         /// mapping function to produce the error value.
+        #[allow(dead_code)] // TODO: Remove when used, or remove the function
         #[inline]
         pub fn map_err<E>(self, err: impl FnOnce(ResultCode) -> E) -> core::result::Result<(), E> {
             self.map((), err)
@@ -243,6 +251,7 @@ pub(crate) mod raw {
         ///
         /// Similar to [`map`], but passes only the description value from the [`ResultCode`] to the error
         /// mapping function, discarding the module information.
+        #[allow(dead_code)] // TODO: Remove when used, or remove the function
         #[inline]
         pub fn map_desc<T, E>(
             self,

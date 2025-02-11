@@ -178,16 +178,42 @@ pub enum Module {
     ShopN = 811,
 }
 
+/// Error description types
+pub type Description = u32;
+
 /// Converts an error description type into the value used in the error code.
 pub trait IntoDescription {
     /// Converts the error description value into a `u32` .
-    fn into_value(self) -> u32;
+    fn into_value(self) -> Description;
 }
 
 // Treat `u32` as a valid description type
 impl IntoDescription for u32 {
-    fn into_value(self) -> u32 {
+    fn into_value(self) -> Description {
         self
+    }
+}
+
+/// Raw error code type
+pub type ResultCode = u32;
+
+/// Converts an error enum into the raw error code
+// TODO: Seal this trait
+pub trait ToRawResultCode {
+    /// Converts the error enum into a raw error code
+    fn to_rc(self) -> ResultCode;
+}
+
+impl ToRawResultCode for u32 {
+    fn to_rc(self) -> ResultCode {
+        self
+    }
+}
+
+impl ToRawResultCode for (Module, Description) {
+    fn to_rc(self) -> ResultCode {
+        // The module is shifted left by 9 bits, and the error code is OR'd with it.
+        ((self.0 as u32) << 9) | self.1
     }
 }
 
@@ -242,5 +268,11 @@ impl PartialEq<u32> for KernelError {
 impl IntoDescription for KernelError {
     fn into_value(self) -> u32 {
         self as u32
+    }
+}
+
+impl ToRawResultCode for KernelError {
+    fn to_rc(self) -> ResultCode {
+        (Module::Kernel, self.into_value()).to_rc()
     }
 }
