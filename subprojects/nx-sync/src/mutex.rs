@@ -22,22 +22,51 @@ pub struct Mutex(u32);
 // Ensure the in-memory sisze of the Mutex is the same as u32
 const_assert_eq!(size_of::<Mutex>(), size_of::<u32>());
 
-impl Default for Mutex {
-    /// Creates a new mutex.
-    ///
-    /// The mutex is initially unlocked.
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-// TODO: Add Loc, TryLock, etc. methods
 impl Mutex {
     /// Creates a new mutex.
     ///
     /// The mutex is initially unlocked.
     pub const fn new() -> Self {
         Self(INVALID_HANDLE)
+    }
+
+    /// Locks the mutex, blocking the current thread until the lock can be acquired.
+    ///
+    /// This function will block the current thread until it is able to acquire the mutex.
+    /// When the function returns, the current thread will be the only thread with the
+    /// mutex locked.
+    pub fn lock(&self) {
+        unsafe { __nx_sync_mutex_lock(self.0 as *mut u32) }
+    }
+
+    /// Attempts to lock the mutex without blocking.
+    ///
+    /// If the mutex is already locked by another thread, this function will return
+    /// immediately with `false`. If the mutex is unlocked, it will be locked and
+    /// this function will return `true`.
+    ///
+    /// # Returns
+    ///
+    /// * `true` if the mutex was successfully locked
+    /// * `false` if the mutex was already locked by another thread
+    pub fn try_lock(&self) -> bool {
+        unsafe { __nx_sync_mutex_try_lock(self.0 as *mut u32) }
+    }
+
+    /// Unlocks the mutex.
+    ///
+    /// This function will unlock the mutex, allowing other threads to lock it.
+    pub fn unlock(&self) {
+        unsafe { __nx_sync_mutex_unlock(self.0 as *mut u32) }
+    }
+}
+
+impl Default for Mutex {
+    /// Creates a new mutex.
+    ///
+    /// The mutex is initially unlocked.
+    fn default() -> Self {
+        Self::new()
     }
 }
 
