@@ -1,12 +1,13 @@
 //! # nx-sync
 
 #![no_std]
-
 pub mod barrier;
 pub mod condvar;
 pub mod mutex;
+mod result;
 pub mod rwlock;
 pub mod semaphore;
+pub mod sys;
 
 /// #[panic_handler]
 ///

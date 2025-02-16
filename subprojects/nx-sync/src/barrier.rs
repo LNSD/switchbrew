@@ -1,67 +1,96 @@
 //! # Barrier
-//!
-//! Multi-threading Barrier
 
-use core::cell::UnsafeCell;
-
-use static_assertions::const_assert_eq;
+use core::fmt;
 
 use crate::{condvar::Condvar, mutex::Mutex};
 
-/// Barrier structure.
+/// A barrier enables multiple threads to synchronize the beginning
+/// of some computation.
 pub struct Barrier {
-    /// Number of threads to reach the barrier
-    count: UnsafeCell<u64>,
-    /// Number of threads to wait on
-    total: u64,
-    /// Mutex for synchronization
-    mutex: Mutex,
-    /// Condition variable for thread waiting
-    condvar: Condvar,
+    lock: Mutex<BarrierState>,
+    cvar: Condvar,
+    num_threads: usize,
 }
 
-// Ensure that the Barrier has a 24 bytes size, and is properly aligned
-const_assert_eq!(size_of::<Barrier>(), 24);
-const_assert_eq!(align_of::<Barrier>(), align_of::<u64>());
+// The inner state of a double barrier
+struct BarrierState {
+    count: usize,
+    generation_id: usize,
+}
+
+/// A `BarrierWaitResult` is returned by [`Barrier::wait()`] when all threads
+/// in the [`Barrier`] have rendezvoused.
+pub struct BarrierWaitResult(bool);
+
+impl fmt::Debug for Barrier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Barrier").finish_non_exhaustive()
+    }
+}
 
 impl Barrier {
-    /// Initializes a barrier and the number of threads to wait on.
+    /// Creates a new barrier that can block a given number of threads.
     ///
-    /// # Arguments
-    /// * `thread_count` - Initial value for the number of threads the barrier must wait for.
-    pub fn new(thread_count: u64) -> Self {
+    /// A barrier will block `n`-1 threads which call [`wait()`] and then wake
+    /// up all threads at once when the `n`th thread calls [`wait()`].
+    ///
+    /// [`wait()`]: Barrier::wait
+    #[must_use]
+    #[inline]
+    pub const fn new(n: usize) -> Barrier {
         Barrier {
-            count: UnsafeCell::new(0),
-            total: thread_count - 1,
-            mutex: Mutex::new(),
-            condvar: Condvar::new(),
+            lock: Mutex::new(BarrierState {
+                count: 0,
+                generation_id: 0,
+            }),
+            cvar: Condvar::new(),
+            num_threads: n,
         }
     }
 
-    /// Forces threads to wait until all threads have called barrier_wait.
-    pub fn wait(&self) {
-        self.mutex.lock();
-
-        let count = unsafe { &mut *self.count.get() };
-        if *count == self.total {
-            *count = 0;
-            self.condvar.wake(self.total as i32);
+    /// Blocks the current thread until all threads have rendezvoused here.
+    ///
+    /// Barriers are re-usable after all threads have rendezvoused once, and can
+    /// be used continuously.
+    ///
+    /// A single (arbitrary) thread will receive a [`BarrierWaitResult`] that
+    /// returns `true` from [`BarrierWaitResult::is_leader()`] when returning
+    /// from this function, and all other threads will receive a result that
+    /// will return `false` from [`BarrierWaitResult::is_leader()`].
+    pub fn wait(&self) -> BarrierWaitResult {
+        let mut lock = self.lock.lock();
+        let local_gen = lock.generation_id;
+        lock.count += 1;
+        if lock.count < self.num_threads {
+            let _guard = self
+                .cvar
+                .wait_while(lock, |state| local_gen == state.generation_id);
+            BarrierWaitResult(false)
         } else {
-            *count = count.checked_add(1).expect("Barrier count overflow");
-            self.condvar.wait(&self.mutex);
+            lock.count = 0;
+            lock.generation_id = lock.generation_id.wrapping_add(1);
+            self.cvar.notify_all();
+            BarrierWaitResult(true)
         }
-
-        self.mutex.unlock();
     }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_barrier_init(bar: *mut Barrier, thread_count: u64) {
-    unsafe { bar.write(Barrier::new(thread_count)) };
+impl fmt::Debug for BarrierWaitResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("BarrierWaitResult")
+            .field("is_leader", &self.is_leader())
+            .finish()
+    }
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_barrier_wait(bar: *mut Barrier) {
-    let bar = unsafe { &*bar };
-    bar.wait();
+impl BarrierWaitResult {
+    /// Returns `true` if this thread is the "leader thread" for the call to
+    /// [`Barrier::wait()`].
+    ///
+    /// Only one thread will have `true` returned from their result, all other
+    /// threads will have `false` returned.
+    #[must_use]
+    pub fn is_leader(&self) -> bool {
+        self.0
+    }
 }

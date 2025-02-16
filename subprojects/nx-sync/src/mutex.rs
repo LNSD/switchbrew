@@ -1,386 +1,182 @@
 //! # Mutex
-//!
-//! Mutex synchronization primitive
-//!
-//! This module provides a mutex implementation that uses the Nintendo Switch kernel's
-//! synchronization primitives. A mutex is used to protect shared data from being
-//! simultaneously accessed by multiple threads.
-//!
-//! The implementation is FFI-compatible with libnx's mutex implementation, allowing
-//! it to be used seamlessly with C code. The mutex is represented as a 32-bit value
-//! in memory that contains both the owner's thread handle and a waiters flag.
-//!
-//! When locked, only the thread that acquired the lock can unlock it. If other threads
-//! attempt to lock an already locked mutex, they will be suspended by the kernel until
-//! the mutex becomes available.
 
 use core::{
-    ptr,
-    sync::atomic::{AtomicU32, Ordering},
+    cell::UnsafeCell,
+    fmt,
+    ops::{Deref, DerefMut},
 };
 
-use nx_svc::{
-    debug::break_event,
-    raw::{BreakReason, INVALID_HANDLE},
-    sync::{HANDLE_WAIT_MASK, arbitrate_lock, arbitrate_unlock},
+use crate::{
+    result::{TryLockError, TryLockResult},
+    sys,
 };
-use nx_thread::raw::Handle;
-use static_assertions::const_assert_eq;
 
 /// A mutual exclusion primitive useful for protecting shared data
 ///
-/// A mutex is a synchronization primitive that can be used to protect shared data from being
-/// simultaneously accessed by multiple threads.
-// NOTE: The in-memory representation of the Mutex must be u32 for FFI compatibility
-#[repr(C)]
-pub struct Mutex(AtomicU32);
+/// This mutex will block threads waiting for the lock to become available. The
+/// mutex can be created via a [`new`] constructor. Each mutex has a type parameter
+/// which represents the data that it is protecting. The data can only be accessed
+/// through the RAII guards returned from [`lock`] and [`try_lock`], which
+/// guarantees that the data is only ever accessed when the mutex is locked.
+pub struct Mutex<T: ?Sized> {
+    inner: sys::Mutex,
+    data: UnsafeCell<T>,
+}
 
-// Ensure the in-memory size of the Mutex is the same as u32
-const_assert_eq!(size_of::<Mutex>(), size_of::<u32>());
+unsafe impl<T: ?Sized + Send> Send for Mutex<T> {}
+unsafe impl<T: ?Sized + Send> Sync for Mutex<T> {}
 
-impl Mutex {
-    /// Creates a new [`Mutex`].
+impl<T> Mutex<T> {
+    /// Creates a new mutex in an unlocked state ready for use.
+    #[inline]
+    pub const fn new(data: T) -> Mutex<T> {
+        Mutex {
+            inner: sys::Mutex::new(),
+            data: UnsafeCell::new(data),
+        }
+    }
+}
+
+impl<T: ?Sized> Mutex<T> {
+    /// Acquires a mutex, blocking the current thread until it is able to do so.
     ///
-    /// The mutex is initialized in an unlocked state, ready to be locked by any thread.
-    pub const fn new() -> Self {
-        Self(AtomicU32::new(INVALID_HANDLE))
+    /// This function will block the local thread until it is available to acquire
+    /// the mutex. Upon returning, the thread is the only thread with the lock
+    /// held. An RAII guard is returned to allow scoped unlock of the lock. When
+    /// the guard goes out of scope, the mutex will be unlocked.
+    ///
+    /// The exact behavior on locking a mutex in the thread which already holds
+    /// the lock is left unspecified. However, this function will not return on
+    /// the second call (it might panic or deadlock, for example).
+    pub fn lock(&self) -> MutexGuard<'_, T> {
+        unsafe {
+            self.inner.lock();
+            MutexGuard::new(self)
+        }
     }
 
-    /// Returns a raw pointer to the underlying atomic integer.
+    /// Attempts to acquire this lock.
     ///
-    /// # Safety
+    /// If the lock could not be acquired at this time, then [`Err`] is returned.
+    /// Otherwise, an RAII guard is returned. The lock will be unlocked when the
+    /// guard is dropped.
     ///
-    /// This function is intended for FFI purposes and should be used with care.
-    /// The caller must ensure that:
-    /// - The pointer is not used after the mutex is dropped
-    /// - The pointer is only used with Nintendo Switch kernel synchronization primitives
-    /// - The pointer is properly aligned and valid for the lifetime of the mutex
-    pub fn as_ptr(&self) -> *mut u32 {
-        self.0.as_ptr()
-    }
-
-    /// Locks the mutex, blocking the current thread until the lock can be acquired.
+    /// This function does not block.
     ///
-    /// This function will block the current thread until it is able to acquire the mutex.
-    /// When the function returns, the current thread will be the only thread with the
-    /// mutex locked.
+    /// # Errors
     ///
-    /// # Panics
+    /// If the mutex could not be acquired because it is already locked, then
+    /// this call will return the [`WouldBlock`] error.
     ///
-    /// Panics if the kernel's lock arbitration fails. This should never happen under
-    /// normal circumstances.
-    pub fn lock(&self) {
-        let curr_thread_handle = get_curr_thread_handle();
-        let mut curr_state = MutexState::from_raw(self.0.load(Ordering::Acquire));
-
-        loop {
-            match curr_state {
-                MutexState::Unlocked => {
-                    // Attempt to acquire the lock
-                    match self.0.compare_exchange(
-                        curr_state.into_raw(),
-                        MutexState::Locked(MutexTag(curr_thread_handle)).into_raw(),
-                        Ordering::Acquire,
-                        Ordering::Relaxed,
-                    ) {
-                        Ok(_) => return, // Lock acquired successfully
-                        Err(new_value) => {
-                            // Another thread modified the mutex; retry with the new value
-                            curr_state = MutexState::from_raw(new_value);
-                            continue;
-                        }
-                    }
-                }
-                MutexState::Locked(mut tag) => {
-                    // If there are no waiters, set the waiters bitflag and proceed to arbitration
-                    if !tag.has_waiters() {
-                        tag.set_waiters_bitflag();
-
-                        if let Err(new_value) = self.0.compare_exchange(
-                            curr_state.into_raw(),
-                            MutexState::Locked(tag).into_raw(),
-                            Ordering::Acquire,
-                            Ordering::Relaxed,
-                        ) {
-                            // Another thread modified the mutex; retry with the new value
-                            curr_state = MutexState::from_raw(new_value);
-                            continue;
-                        }
-                    }
-
-                    // Ask the kernel to arbitrate the mutex locking
-                    // This will pause the current thread until the mutex is unlocked
-                    let arb_result = unsafe {
-                        arbitrate_lock(tag.get_owner_handle(), self.0.as_ptr(), curr_thread_handle)
-                    };
-                    if arb_result.is_err() {
-                        // This should never happen
-                        // TODO: Handle the arbitrate_lock errors
-                        let _ = unsafe { break_event(BreakReason::Assert, ptr::null_mut(), 0) };
-                    }
-
-                    // The arbitration has completed; check if we acquired the lock
-                    curr_state = MutexState::from_raw(self.0.load(Ordering::Acquire));
-                    if matches!(curr_state, MutexState::Locked(tag) if tag.get_owner_handle() == curr_thread_handle)
-                    {
-                        return;
-                    }
-
-                    continue;
-                }
+    /// [`WouldBlock`]: TryLockError::WouldBlock
+    pub fn try_lock(&self) -> TryLockResult<MutexGuard<'_, T>> {
+        unsafe {
+            if self.inner.try_lock() {
+                Ok(MutexGuard::new(self))
+            } else {
+                Err(TryLockError::WouldBlock)
             }
         }
     }
 
-    /// Attempts to lock the mutex without blocking.
-    ///
-    /// If the mutex is already locked by another thread, this function returns
-    /// immediately with `false`. If the mutex is unlocked, it will be locked and
-    /// this function will return `true`.
-    ///
-    /// This function is useful when you want to attempt to acquire the lock but
-    /// don't want to block if it's not immediately available.
-    ///
-    /// # Returns
-    ///
-    /// * `true` if the mutex was successfully locked
-    /// * `false` if the mutex was already locked by another thread
-    pub fn try_lock(&self) -> bool {
-        let curr_thread_handle = get_curr_thread_handle();
-
-        // Attempt to acquire the lock by setting it from Unlocked to Locked with the current thread's handle
-        // This will fail if the mutex is already locked
-        self.0
-            .compare_exchange(
-                MutexState::Unlocked.into_raw(),
-                MutexState::Locked(MutexTag(curr_thread_handle)).into_raw(),
-                Ordering::Acquire,
-                Ordering::Relaxed,
-            )
-            .is_ok()
+    /// Consumes this mutex, returning the underlying data.
+    pub fn into_inner(self) -> T
+    where
+        T: Sized,
+    {
+        self.data.into_inner()
     }
 
-    /// Unlocks the [`Mutex`].
+    /// Returns a mutable reference to the underlying data.
     ///
-    /// This function will unlock the mutex, allowing other threads to lock it.
-    /// If there are threads waiting on the mutex, one of them will be woken up
-    /// and given the opportunity to acquire the lock.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the kernel's unlock arbitration fails. This should never happen
-    /// under normal circumstances.
-    pub fn unlock(&self) {
-        let curr_thread_handle = get_curr_thread_handle();
-        let mut curr_state = MutexState::from_raw(self.0.load(Ordering::Acquire));
+    /// Since this call borrows the `Mutex` mutably, no actual locking needs to
+    /// take place -- the mutable borrow statically guarantees no locks exist.
+    pub fn get_mut(&mut self) -> &mut T {
+        self.data.get_mut()
+    }
+}
 
-        loop {
-            match curr_state {
-                MutexState::Unlocked => return,
-                MutexState::Locked(tag) => {
-                    // If the mutex is not locked by the current thread, return
-                    if tag.get_owner_handle() != curr_thread_handle {
-                        return;
-                    }
+impl<T> From<T> for Mutex<T> {
+    /// Creates a new mutex in an unlocked state ready for use.
+    /// This is equivalent to [`Mutex::new`].
+    fn from(t: T) -> Self {
+        Mutex::new(t)
+    }
+}
 
-                    // If locked and there are waiters, ask the kernel to arbitrate the mutex unlocking
-                    if tag.has_waiters() {
-                        unsafe {
-                            if arbitrate_unlock(self.0.as_ptr()).is_err() {
-                                // This should never happen
-                                // TODO: Handle the arbitrate_lock errors
-                                let _ = break_event(BreakReason::Assert, ptr::null_mut(), 0);
-                            }
-                        }
-                        return;
-                    }
+impl<T: ?Sized + Default> Default for Mutex<T> {
+    /// Creates a `Mutex<T>`, with the `Default` value for T.
+    fn default() -> Mutex<T> {
+        Mutex::new(Default::default())
+    }
+}
 
-                    // Attempt to set the mutex state to Unlocked
-                    match self.0.compare_exchange(
-                        curr_state.into_raw(),
-                        MutexState::Unlocked.into_raw(),
-                        Ordering::Release,
-                        Ordering::Relaxed,
-                    ) {
-                        Ok(_) => return,
-                        Err(current_value) => {
-                            // If another thread modified the mutex, retry with the new value
-                            curr_state = MutexState::from_raw(current_value);
-                            continue;
-                        }
-                    }
-                }
+impl<T: ?Sized + fmt::Debug> fmt::Debug for Mutex<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut d = f.debug_struct("Mutex");
+        match self.try_lock() {
+            Ok(guard) => {
+                d.field("data", &&*guard);
+            }
+            Err(TryLockError::WouldBlock) => {
+                d.field("data", &format_args!("<locked>"));
             }
         }
+        d.finish_non_exhaustive()
     }
 }
 
-impl Default for Mutex {
-    /// Creates a new [`Mutex`].
-    ///
-    /// The mutex is initially unlocked.
-    fn default() -> Self {
-        Self::new()
-    }
+#[must_use = "if unused the Mutex will immediately unlock"]
+#[clippy::has_significant_drop]
+pub struct MutexGuard<'a, T: ?Sized + 'a> {
+    lock: &'a Mutex<T>,
+    _marker: core::marker::PhantomData<*const ()>,
 }
 
-/// Internal representation of the [MutexTag].
-type RawMutexTag = u32;
+unsafe impl<T: ?Sized + Sync> Sync for MutexGuard<'_, T> {}
 
-/// A value-to-raw mutex tag value conversion that consumes the inout value.
-trait IntoRawTag {
-    /// Converts this type into a raw mutex tag.
-    fn into_raw(self) -> RawMutexTag;
-}
-
-/// Mutex state.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum MutexState {
-    /// Unlocked mutex.
-    Unlocked,
-    /// Locked mutex.
-    Locked(MutexTag),
-}
-
-impl MutexState {
-    /// Convert a raw mutex tag value into a mutex state.
-    fn from_raw(value: RawMutexTag) -> Self {
-        if value == INVALID_HANDLE {
-            Self::Unlocked
-        } else {
-            Self::Locked(MutexTag(value))
+impl<'mutex, T: ?Sized> MutexGuard<'mutex, T> {
+    unsafe fn new(lock: &'mutex Mutex<T>) -> MutexGuard<'mutex, T> {
+        MutexGuard {
+            lock,
+            _marker: Default::default(),
         }
     }
 }
 
-impl IntoRawTag for MutexState {
-    /// Converts the [MutexState] into a raw mutex tag value.
-    fn into_raw(self) -> RawMutexTag {
-        match self {
-            Self::Unlocked => INVALID_HANDLE,
-            Self::Locked(MutexTag(tag)) => tag,
-        }
+impl<T: ?Sized> Deref for MutexGuard<'_, T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        unsafe { &*self.lock.data.get() }
     }
 }
 
-/// Mutex tag
-///
-/// The mutex tag holds two pieces of information:
-///
-/// - **The owner's thread kernel handle.**
-///   When locked, the mutex tag is used to store the owner's thread kernel handle. And when
-///   unlocked, it is reset to `INVALID_HANDLE`.
-/// - **The _waiters_ bitflag.**
-///   The _waiters bit_ is used to indicate to the kernel that there are other threads waiting for
-///   the mutex.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MutexTag(RawMutexTag);
-
-impl MutexTag {
-    /// Get the mutex owner handle.
-    ///
-    /// Returns the mutex owner's thread kernel handle with the _waiters bitflag_ cleared.
-    fn get_owner_handle(&self) -> Handle {
-        self.0 & !HANDLE_WAIT_MASK
-    }
-
-    /// Check if there is any other thread waiting for the mutex.
-    ///
-    /// Indicate whether the mutex owner tag's _waiters bitflag_ is set.
-    ///
-    /// Returns `true` if the _waiters bitflag_ is set, `false` otherwise.
-    fn has_waiters(&self) -> bool {
-        self.0 & HANDLE_WAIT_MASK != 0
-    }
-
-    /// Set the mutex tag's _waiters bitflag_.
-    ///
-    /// This indicates the kernel that there are other threads waiting for the mutex.
-    fn set_waiters_bitflag(&mut self) {
-        self.0 |= HANDLE_WAIT_MASK;
+impl<T: ?Sized> DerefMut for MutexGuard<'_, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        unsafe { &mut *self.lock.data.get() }
     }
 }
 
-/// Initializes the mutex.
-///
-/// # Safety
-///
-/// This function is unsafe because it:
-/// - Writes to the memory pointed to by `mutex`
-/// - Requires that `mutex` is valid and properly aligned
-/// - Requires that `mutex` points to memory that can be safely written to
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_mutex_init(mutex: *mut Mutex) {
-    unsafe { mutex.write(Mutex::new()) };
+impl<T: ?Sized> Drop for MutexGuard<'_, T> {
+    #[inline]
+    fn drop(&mut self) {
+        self.lock.inner.unlock();
+    }
 }
 
-/// Locks the mutex.
-///
-/// # Safety
-///
-/// This function is unsafe because it:
-/// - Requires that `mutex` points to a valid Mutex instance
-/// - Requires that `mutex` is properly aligned
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_mutex_lock(mutex: *mut Mutex) {
-    let mutex = unsafe { &*mutex };
-    mutex.lock();
+impl<T: ?Sized + fmt::Debug> fmt::Debug for MutexGuard<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&**self, f)
+    }
 }
 
-/// Attempts to lock the mutex without waiting.
-///
-/// # Safety
-///
-/// This function is unsafe because it:
-/// - Requires that `mutex` points to a valid Mutex instance
-/// - Requires that `mutex` is properly aligned
-///
-/// # Returns
-///
-/// Returns `true` if the mutex was successfully locked, `false` if it was already locked.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_mutex_try_lock(mutex: *mut Mutex) -> bool {
-    let mutex = unsafe { &*mutex };
-    mutex.try_lock()
+impl<T: ?Sized + fmt::Display> fmt::Display for MutexGuard<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (**self).fmt(f)
+    }
 }
 
-/// Unlocks the mutex.
-///
-/// # Safety
-///
-/// This function is unsafe because it:
-/// - Requires that `mutex` points to a valid Mutex instance
-/// - Requires that `mutex` is properly aligned
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_mutex_unlock(mutex: *mut Mutex) {
-    let mutex = unsafe { &*mutex };
-    mutex.unlock();
-}
-
-/// Get the current thread's kernel handle.
-#[inline(always)]
-fn get_curr_thread_handle() -> Handle {
-    unsafe { nx_thread::raw::__nx_thread_get_current_thread_handle() }
-}
-
-/// Checks if the mutex is locked by the current thread.
-///
-/// # Safety
-///
-/// This function is unsafe because it:
-/// - Requires that `mutex` points to a valid Mutex instance
-/// - Requires that `mutex` is properly aligned
-///
-/// # Returns
-///
-/// Returns `true` if the mutex is currently locked by the calling thread,
-/// `false` otherwise.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_mutex_is_locked_by_current_thread(mutex: *mut Mutex) -> bool {
-    let mutex = unsafe { &(*mutex).0 };
-
-    let curr_thread_handle = get_curr_thread_handle();
-    let curr_state = MutexState::from_raw(mutex.load(Ordering::Acquire));
-
-    matches!(curr_state, MutexState::Locked(tag) if tag.get_owner_handle() == curr_thread_handle)
+pub(crate) fn guard_lock<'a, T: ?Sized>(guard: &MutexGuard<'a, T>) -> &'a sys::Mutex {
+    &guard.lock.inner
 }

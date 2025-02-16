@@ -2,495 +2,340 @@
 //!
 //! A read/write lock synchronization primitive that allows multiple readers or a single writer.
 
-use core::cell::UnsafeCell;
+use core::{
+    cell::UnsafeCell,
+    fmt,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+    ptr::NonNull,
+};
 
-use nx_svc::raw::{Handle, INVALID_HANDLE};
-use static_assertions::const_assert_eq;
+use crate::{
+    result::{TryLockError, TryLockResult},
+    sys,
+};
 
-use crate::{condvar::Condvar, mutex::Mutex};
-
-/// Read/write lock structure that allows multiple readers or a single writer.
-#[repr(C)]
-pub struct RwLock {
-    mutex: Mutex,
-    condvar_reader_wait: Condvar,
-    condvar_writer_wait: Condvar,
-    read_lock_count: UnsafeCell<u32>,
-    read_waiter_count: UnsafeCell<u32>,
-    write_lock_count: UnsafeCell<u32>,
-    write_waiter_count: UnsafeCell<u32>,
-    write_owner_tag: WriteOwnerTag,
+/// A reader-writer lock
+///
+/// This type of lock allows a number of readers or at most one writer at any
+/// point in time. The write portion of this lock typically allows modification
+/// of the underlying data (exclusive access) and the read portion of this lock
+/// typically allows for read-only access (shared access).
+///
+/// In comparison, a [`Mutex`] does not distinguish between readers or writers
+/// that acquire the lock, therefore blocking any threads waiting for the lock to
+/// become available. An `RwLock` will allow any number of readers to acquire the
+/// lock as long as a writer is not holding the lock.
+///
+/// The priority policy of the lock is dependent on the underlying operating
+/// system's implementation, and this type does not guarantee that any
+/// particular policy will be used. In particular, a writer which is waiting to
+/// acquire the lock in `write` might or might not block concurrent calls to
+/// `read`, e.g.:
+///
+/// <details><summary>Potential deadlock example</summary>
+///
+/// ```text
+/// // Thread 1              |  // Thread 2
+/// let _rg1 = lock.read();  |
+///                          |  // will block
+///                          |  let _wg = lock.write();
+/// // may deadlock          |
+/// let _rg2 = lock.read();  |
+/// ```
+///
+/// </details>
+///
+/// The type parameter `T` represents the data that this lock protects. It is
+/// required that `T` satisfies [`Send`] to be shared across threads and
+/// [`Sync`] to allow concurrent access through readers. The RAII guards
+/// returned from the locking methods implement [`Deref`] (and [`DerefMut`]
+/// for the `write` methods) to allow access to the content of the lock.
+///
+/// [`Mutex`]: super::Mutex
+pub struct RwLock<T: ?Sized> {
+    inner: sys::RwLock,
+    data: UnsafeCell<T>,
 }
 
-// Ensure the struct is the same size as the C struct and has the same layout
-const_assert_eq!(size_of::<RwLock>(), 32);
-const_assert_eq!(align_of::<RwLock>(), align_of::<u32>());
+unsafe impl<T: ?Sized + Send> Send for RwLock<T> {}
+unsafe impl<T: ?Sized + Send + Sync> Sync for RwLock<T> {}
 
-impl RwLock {
-    /// Creates a new [`RwLock`] in an unlocked state.
+/// RAII structure used to release the shared read access of a lock when
+/// dropped.
+///
+/// This structure is created by the [`read`] and [`try_read`] methods on
+/// [`RwLock`].
+///
+/// [`read`]: RwLock::read
+/// [`try_read`]: RwLock::try_read
+#[must_use = "if unused the RwLock will immediately unlock"]
+#[clippy::has_significant_drop]
+pub struct RwLockReadGuard<'a, T: ?Sized + 'a> {
+    // NB: we use a pointer instead of `&'a T` to avoid `noalias` violations, because a
+    // `RwLockReadGuard` argument doesn't hold immutability for its whole scope, only until it drops.
+    // `NonNull` is also covariant over `T`, just like we would have with `&T`. `NonNull`
+    // is preferable over `const* T` to allow for niche optimization.
+    data: NonNull<T>,
+    inner_lock: &'a sys::RwLock,
+    _marker: PhantomData<*const ()>,
+}
+
+unsafe impl<T: ?Sized + Sync> Sync for RwLockReadGuard<'_, T> {}
+
+/// RAII structure used to release the exclusive write access of a lock when
+/// dropped.
+///
+/// This structure is created by the [`write`] and [`try_write`] methods
+/// on [`RwLock`].
+///
+/// [`write`]: RwLock::write
+/// [`try_write`]: RwLock::try_write
+#[must_use = "if unused the RwLock will immediately unlock"]
+#[clippy::has_significant_drop]
+pub struct RwLockWriteGuard<'a, T: ?Sized + 'a> {
+    lock: &'a RwLock<T>,
+    _marker: PhantomData<*const ()>,
+}
+
+unsafe impl<T: ?Sized + Sync> Sync for RwLockWriteGuard<'_, T> {}
+
+impl<T> RwLock<T> {
+    /// Creates a new instance of an `RwLock<T>` which is unlocked.
+    #[inline]
+    pub const fn new(t: T) -> RwLock<T> {
+        RwLock {
+            inner: sys::RwLock::new(),
+            data: UnsafeCell::new(t),
+        }
+    }
+}
+
+impl<T: ?Sized> RwLock<T> {
+    /// Locks this `RwLock` with shared read access, blocking the current thread
+    /// until it can be acquired.
     ///
-    /// The lock is initialized with no readers or writers, and can be immediately used
-    /// for synchronization.
-    pub const fn new() -> Self {
-        Self {
-            mutex: Mutex::new(),
-            condvar_reader_wait: Condvar::new(),
-            condvar_writer_wait: Condvar::new(),
-            read_lock_count: UnsafeCell::new(0),
-            read_waiter_count: UnsafeCell::new(0),
-            write_lock_count: UnsafeCell::new(0),
-            write_waiter_count: UnsafeCell::new(0),
-            write_owner_tag: WriteOwnerTag::new(),
+    /// The calling thread will be blocked until there are no more writers which
+    /// hold the lock. There may be other readers currently inside the lock when
+    /// this method returns. This method does not provide any guarantees with
+    /// respect to the ordering of whether contentious readers or writers will
+    /// acquire the lock first.
+    ///
+    /// Returns an RAII guard which will release this thread's shared access
+    /// once it is dropped.
+    #[inline]
+    pub fn read(&self) -> RwLockReadGuard<'_, T> {
+        unsafe {
+            self.inner.read_lock();
+            RwLockReadGuard::new(self)
         }
     }
 
-    /// Locks the [`RwLock`] for reading.
+    /// Attempts to acquire this `RwLock` with shared read access.
     ///
-    /// Multiple threads can acquire the read lock simultaneously as long as there is no writer.
-    /// If the current thread already holds the write lock, it can also acquire read locks
-    /// without blocking.
+    /// If the access could not be granted at this time, then `Err` is returned.
+    /// Otherwise, an RAII guard is returned which will release the shared access
+    /// when it is dropped.
     ///
-    /// This call will block if:
-    /// - Another thread holds the write lock
-    /// - There are waiting writers (to prevent writer starvation)
-    pub fn read_lock(&self) {
-        let curr_thread_handle = get_curr_thread_handle();
-
-        // If the current thread already holds the write lock, increment the read count
-        // without blocking.
-        let read_lock_count = unsafe { &mut *self.read_lock_count.get() };
-        if self.write_owner_tag == curr_thread_handle {
-            *read_lock_count += 1;
-            return;
-        }
-
-        // Lock the mutex to prevent concurrent modifications.
-        self.mutex.lock();
-
-        // If there are waiting writers, increment the reader waiter count and wait for
-        // the writer to finish.
-        let write_waiter_count = unsafe { &*self.write_waiter_count.get() };
-        let read_waiter_count = unsafe { &mut *self.read_waiter_count.get() };
-        #[allow(clippy::while_immutable_condition)]
-        while *write_waiter_count > 0 {
-            *read_waiter_count += 1;
-            self.condvar_reader_wait.wait(&self.mutex);
-            *read_waiter_count -= 1;
-        }
-
-        // Increment the read count.
-        *read_lock_count += 1;
-
-        // Unlock the mutex to allow other threads to acquire the lock
-        self.mutex.unlock();
-    }
-
-    /// Attempts to lock the [`RwLock`] for reading without waiting.
+    /// This function does not block.
     ///
-    /// This method will never block. If the lock cannot be acquired immediately,
-    /// it returns false.
+    /// This function does not provide any guarantees with respect to the ordering
+    /// of whether contentious readers or writers will acquire the lock first.
     ///
-    /// # Returns
+    /// # Errors
     ///
-    /// * `true` if the lock was acquired successfully:
-    ///   - No other thread holds the write lock
-    ///   - No writers are waiting
-    ///   - The current thread holds the write lock
-    /// * `false` if there was contention
-    pub fn try_read_lock(&self) -> bool {
-        let curr_thread_handle = get_curr_thread_handle();
-
-        // If the current thread already holds the write lock, increment the read count
-        // without blocking.
-        let read_lock_count = unsafe { &mut *self.read_lock_count.get() };
-        if self.write_owner_tag == curr_thread_handle {
-            *read_lock_count += 1;
-            return true;
-        }
-
-        // Try to lock the mutex
-        if !self.mutex.try_lock() {
-            return false;
-        }
-
-        // If there are no waiting writers, increment the read count
-        let write_waiter_count = unsafe { &*self.write_waiter_count.get() };
-        let got_lock = *write_waiter_count == 0;
-        if got_lock {
-            *read_lock_count += 1;
-        }
-
-        // Unlock the mutex to allow other threads to acquire the lock
-        self.mutex.unlock();
-
-        got_lock
-    }
-
-    /// Unlocks the [`RwLock`] for reading.
+    /// This function will return the [`WouldBlock`] error if the `RwLock` could
+    /// not be acquired because it was already locked exclusively.
     ///
-    /// This method must only be called by a thread that currently holds a read lock.
-    /// If this is the last read lock and there are waiting writers, one of them will
-    /// be woken up.
-    pub fn read_unlock(&self) {
-        let curr_thread_handle = get_curr_thread_handle();
-
-        // If the current thread does not hold the write lock, decrement the read count
-        // and wake up a writer if there are any.
-        if self.write_owner_tag != curr_thread_handle {
-            self.mutex.lock();
-
-            // Decrement the read count.
-            let read_lock_count = unsafe { &mut *self.read_lock_count.get() };
-            *read_lock_count -= 1;
-
-            // If there are no more readers and there are waiting writers, wake up one writer
-            let write_waiter_count = unsafe { &*self.write_waiter_count.get() };
-            if *read_lock_count == 0 && *write_waiter_count > 0 {
-                self.condvar_writer_wait.wake_one();
-            }
-
-            self.mutex.unlock();
-        } else {
-            // If the current thread holds the write lock, decrement the read count without blocking
-            let read_lock_count = unsafe { &mut *self.read_lock_count.get() };
-            *read_lock_count -= 1;
-
-            // If there are no more readers and there are waiting writers, wake up one writer
-            let write_lock_count = unsafe { &*self.write_lock_count.get() };
-            if *read_lock_count == 0 && *write_lock_count == 0 {
-                self.write_owner_tag.clear();
-
-                // Wake up a waiting writer if there are any,
-                // otherwise wake up all waiting readers
-                let write_waiter_count = unsafe { &*self.write_waiter_count.get() };
-                let read_waiter_count = unsafe { &*self.read_waiter_count.get() };
-                if *write_waiter_count > 0 {
-                    self.condvar_writer_wait.wake_one();
-                } else if *read_waiter_count > 0 {
-                    self.condvar_reader_wait.wake_all();
-                }
-
-                self.mutex.unlock();
+    /// [`WouldBlock`]: TryLockError::WouldBlock
+    #[inline]
+    pub fn try_read(&self) -> TryLockResult<RwLockReadGuard<'_, T>> {
+        unsafe {
+            if self.inner.try_read_lock() {
+                Ok(RwLockReadGuard::new(self))
+            } else {
+                Err(TryLockError::WouldBlock)
             }
         }
     }
 
-    /// Locks the [`RwLock`] for writing.
+    /// Locks this `RwLock` with exclusive write access, blocking the current
+    /// thread until it can be acquired.
     ///
-    /// Only one thread can acquire the write lock at a time, and no readers can acquire
-    /// the lock while a writer holds it. If the current thread already holds the write lock,
-    /// the write count is incremented without blocking.
+    /// This function will not return while other writers or other readers
+    /// currently have access to the lock.
     ///
-    /// This call will block if:
-    /// - Other threads hold read locks
-    /// - Another thread holds the write lock
-    pub fn write_lock(&self) {
-        let curr_thread_handle = get_curr_thread_handle();
-
-        // If the current thread already holds the write lock, increment the write count
-        // without blocking.
-        let write_lock_count = unsafe { &mut *self.write_lock_count.get() };
-        if self.write_owner_tag == curr_thread_handle {
-            *write_lock_count += 1;
-            return;
+    /// Returns an RAII guard which will drop the write access of this `RwLock`
+    /// when dropped.
+    #[inline]
+    pub fn write(&self) -> RwLockWriteGuard<'_, T> {
+        unsafe {
+            self.inner.write_lock();
+            RwLockWriteGuard::new(self)
         }
-
-        self.mutex.lock();
-
-        // If there are waiting readers, increment the writer waiter count and wait for
-        // the readers to finish.
-        let read_lock_count = unsafe { &*self.read_lock_count.get() };
-        let write_waiter_count = unsafe { &mut *self.write_waiter_count.get() };
-        #[allow(clippy::while_immutable_condition)]
-        while *read_lock_count > 0 {
-            *write_waiter_count += 1;
-            self.condvar_writer_wait.wait(&self.mutex);
-            *write_waiter_count -= 1;
-        }
-
-        // Increment the write count, and set the write owner tag to the current thread
-        *write_lock_count = 1;
-        self.write_owner_tag.set(curr_thread_handle);
-
-        // NOTE: The mutex is intentionally not unlocked here.
-        //       It will be unlocked by a call to read_unlock or write_unlock.
     }
 
-    /// Attempts to lock the [`RwLock`] for writing without waiting.
+    /// Attempts to lock this `RwLock` with exclusive write access.
     ///
-    /// This method will never block. If the lock cannot be acquired immediately,
-    /// it returns `false`.
+    /// If the lock could not be acquired at this time, then `Err` is returned.
+    /// Otherwise, an RAII guard is returned which will release the lock when
+    /// it is dropped.
     ///
-    /// # Returns
+    /// This function does not block.
     ///
-    /// * `true` if the lock was acquired successfully:
-    ///   - No other thread holds read locks
-    ///   - No other thread holds the write lock
-    ///   - The current thread already holds the write lock
-    /// * `false` if there was contention
-    pub fn try_write_lock(&self) -> bool {
-        let curr_thread_handle = get_curr_thread_handle();
-
-        // If the current thread already holds the write lock, increment the write count
-        // without blocking.
-        if self.write_owner_tag == curr_thread_handle {
-            let write_lock_count = unsafe { &mut *self.write_lock_count.get() };
-            *write_lock_count += 1;
-            return true;
-        }
-
-        if !self.mutex.try_lock() {
-            return false;
-        }
-
-        // If there are waiting readers, return false
-        let read_lock_count = unsafe { &*self.read_lock_count.get() };
-        if *read_lock_count > 0 {
-            self.mutex.unlock();
-            return false;
-        }
-
-        // Set the write count to 1, and set the write ownWriteUnlocker tag to the current thread
-        let write_lock_count = unsafe { &mut *self.write_lock_count.get() };
-        *write_lock_count = 1;
-        self.write_owner_tag.set(curr_thread_handle);
-
-        // NOTE: The mutex is intentionally not unlocked here.
-        //       It will be unlocked by a call to read_unlock or write_unlock.
-
-        true
-    }
-
-    /// Unlocks the [`RwLock`] for writing.
+    /// This function does not provide any guarantees with respect to the ordering
+    /// of whether contentious readers or writers will acquire the lock first.
     ///
-    /// This method must only be called by a thread that currently holds the write lock.
-    /// When the last write lock is released, waiting writers are given priority over
-    /// waiting readers to prevent writer starvation.
-    pub fn write_unlock(&self) {
-        // NOTE: This function assumes the write lock is held.
-        //       This means that the mutex is locked, and the write owner tag is set
-        //       to the current thread (write_owner_tag == curr_thread_handle).
-
-        let write_lock_count = unsafe { &mut *self.write_lock_count.get() };
-        *write_lock_count -= 1;
-
-        // If there are no more writers and no readers, unlock the mutex and wake up
-        // a waiting writer or all waiting readers.
-        let read_lock_count = unsafe { &*self.read_lock_count.get() };
-        if *write_lock_count == 0 && *read_lock_count == 0 {
-            self.write_owner_tag.clear();
-
-            // Wake up a waiting writer if there are any, otherwise wake up all waiting readers
-            let write_waiter_count = unsafe { &*self.write_waiter_count.get() };
-            let read_waiter_count = unsafe { &*self.read_waiter_count.get() };
-            if *write_waiter_count > 0 {
-                self.condvar_writer_wait.wake_one();
-            } else if *read_waiter_count > 0 {
-                self.condvar_reader_wait.wake_all();
+    /// # Errors
+    ///
+    /// This function will return the [`WouldBlock`] error if the `RwLock` could
+    /// not be acquired because it was already locked exclusively.
+    ///
+    /// [`WouldBlock`]: TryLockError::WouldBlock
+    #[inline]
+    pub fn try_write(&self) -> TryLockResult<RwLockWriteGuard<'_, T>> {
+        unsafe {
+            if self.inner.try_write_lock() {
+                Ok(RwLockWriteGuard::new(self))
+            } else {
+                Err(TryLockError::WouldBlock)
             }
-
-            self.mutex.unlock();
         }
     }
 
-    /// Checks if the write lock is held by the current thread.
+    /// Consumes this `RwLock`, returning the underlying data.
+    pub fn into_inner(self) -> T
+    where
+        T: Sized,
+    {
+        self.data.into_inner()
+    }
+
+    /// Returns a mutable reference to the underlying data.
     ///
-    /// # Returns
+    /// Since this call borrows the `RwLock` mutably, no actual locking needs to
+    /// take place -- the mutable borrow statically guarantees no locks exist.
+    pub fn get_mut(&mut self) -> &mut T {
+        self.data.get_mut()
+    }
+}
+
+impl<T: ?Sized + fmt::Debug> fmt::Debug for RwLock<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut d = f.debug_struct("RwLock");
+        match self.try_read() {
+            Ok(guard) => {
+                d.field("data", &&*guard);
+            }
+            Err(TryLockError::WouldBlock) => {
+                d.field("data", &format_args!("<locked>"));
+            }
+        }
+        d.finish_non_exhaustive()
+    }
+}
+
+impl<T: Default> Default for RwLock<T> {
+    /// Creates a new `RwLock<T>`, with the `Default` value for T.
+    fn default() -> RwLock<T> {
+        RwLock::new(Default::default())
+    }
+}
+
+impl<T> From<T> for RwLock<T> {
+    /// Creates a new instance of an `RwLock<T>` which is unlocked.
+    /// This is equivalent to [`RwLock::new`].
+    fn from(t: T) -> Self {
+        RwLock::new(t)
+    }
+}
+
+impl<'rwlock, T: ?Sized> RwLockReadGuard<'rwlock, T> {
+    /// Creates a new instance of `RwLockReadGuard<T>` from a `RwLock<T>`.
     ///
-    /// * `true` if the current thread holds the write lock
-    /// * `false` if it does not hold the write lock or only holds read locks
-    pub fn is_write_lock_held_by_current_thread(&self) -> bool {
-        self.write_owner_tag == get_curr_thread_handle() && {
-            let write_lock_count = unsafe { &*self.write_lock_count.get() };
-            *write_lock_count > 0
+    /// # Safety
+    ///
+    /// This function is safe if and only if the same thread has successfully and safely called
+    /// `lock.inner.read()`, `lock.inner.try_read()`, or `lock.inner.downgrade()` before
+    /// instantiating this object.
+    unsafe fn new(lock: &'rwlock RwLock<T>) -> RwLockReadGuard<'rwlock, T> {
+        RwLockReadGuard {
+            data: unsafe { NonNull::new_unchecked(lock.data.get()) },
+            inner_lock: &lock.inner,
+            _marker: Default::default(),
         }
     }
+}
 
-    /// Checks if the [`RwLock`] is owned by the current thread.
-    ///
-    /// A thread owns the lock if it holds the write lock or if it holds read locks
-    /// that were acquired while it held the write lock.
-    ///
-    /// # Returns
-    ///
-    /// * `true` if the current thread holds the write lock or if it holds read locks
-    ///   acquired while it held the write lock
-    /// * `false` if it does not own the lock
-    pub fn is_owned_by_current_thread(&self) -> bool {
-        self.write_owner_tag == get_curr_thread_handle()
+impl<'rwlock, T: ?Sized> RwLockWriteGuard<'rwlock, T> {
+    /// Creates a new instance of `RwLockWriteGuard<T>` from a `RwLock<T>`.
+    // SAFETY: if and only if `lock.inner.write()` (or `lock.inner.try_write()`) has been
+    // successfully called from the same thread before instantiating this object.
+    unsafe fn new(lock: &'rwlock RwLock<T>) -> RwLockWriteGuard<'rwlock, T> {
+        RwLockWriteGuard {
+            lock,
+            _marker: Default::default(),
+        }
     }
 }
 
-impl Default for RwLock {
-    fn default() -> Self {
-        Self::new()
+impl<T: ?Sized + fmt::Debug> fmt::Debug for RwLockReadGuard<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (**self).fmt(f)
     }
 }
 
-/// Tag used to identify the owner of the write lock.
-#[repr(transparent)]
-struct WriteOwnerTag(UnsafeCell<u32>);
-
-impl WriteOwnerTag {
-    /// Creates a new [`WriteOwnerTag`] not associated with any handle.
-    const fn new() -> Self {
-        Self(UnsafeCell::new(INVALID_HANDLE))
-    }
-
-    fn set(&self, handle: Handle) {
-        let inner = unsafe { &mut *self.0.get() };
-        *inner = handle;
-    }
-
-    fn clear(&self) {
-        self.set(INVALID_HANDLE)
+impl<T: ?Sized + fmt::Display> fmt::Display for RwLockReadGuard<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (**self).fmt(f)
     }
 }
 
-impl PartialEq<Handle> for WriteOwnerTag {
-    fn eq(&self, other: &Handle) -> bool {
-        let inner = unsafe { &*self.0.get() };
-        *inner == *other
+impl<T: ?Sized + fmt::Debug> fmt::Debug for RwLockWriteGuard<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (**self).fmt(f)
     }
 }
 
-/// Initializes a read/write lock at the given memory location.
-///
-/// # Safety
-///
-/// - `rw` must point to a valid, properly aligned memory location for a `RwLock`
-/// - The memory at `rw` must be writeable
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_rwlock_init(rw: *mut RwLock) {
-    unsafe { rw.write(RwLock::new()) };
+impl<T: ?Sized + fmt::Display> fmt::Display for RwLockWriteGuard<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (**self).fmt(f)
+    }
 }
 
-/// Locks the read/write lock for reading.
-///
-/// Multiple threads can acquire the read lock simultaneously as long as there is no writer.
-///
-/// # Safety
-///
-/// - `rw` must point to a valid, initialized `RwLock`
-/// - The `RwLock` must not be concurrently modified except through its synchronized methods
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_rwlock_read_lock(rw: *mut RwLock) {
-    let rw = unsafe { &*rw };
-    rw.read_lock();
+impl<T: ?Sized> Deref for RwLockReadGuard<'_, T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        // SAFETY: the conditions of `RwLockReadGuard::new` were satisfied when created.
+        unsafe { self.data.as_ref() }
+    }
 }
 
-/// Attempts to lock the read/write lock for reading without waiting.
-///
-/// # Returns
-///
-/// * `true` if the lock was acquired successfully
-/// * `false` if there was contention
-///
-/// # Safety
-///
-/// - `rw` must point to a valid, initialized `RwLock`
-/// - The `RwLock` must not be concurrently modified except through its synchronized methods
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_rwlock_try_read_lock(rw: *mut RwLock) -> bool {
-    let rw = unsafe { &*rw };
-    rw.try_read_lock()
+impl<T: ?Sized> Deref for RwLockWriteGuard<'_, T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        // SAFETY: the conditions of `RwLockWriteGuard::new` were satisfied when created.
+        unsafe { &*self.lock.data.get() }
+    }
 }
 
-/// Unlocks the read/write lock for reading.
-///
-/// # Safety
-///
-/// - `rw` must point to a valid, initialized `RwLock`
-/// - The current thread must hold a read lock on the `RwLock`
-/// - The `RwLock` must not be concurrently modified except through its synchronized methods
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_rwlock_read_unlock(rw: *mut RwLock) {
-    let rw = unsafe { &*rw };
-    rw.read_unlock();
+impl<T: ?Sized> DerefMut for RwLockWriteGuard<'_, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        // SAFETY: the conditions of `RwLockWriteGuard::new` were satisfied when created.
+        unsafe { &mut *self.lock.data.get() }
+    }
 }
 
-/// Locks the read/write lock for writing.
-///
-/// Only one thread can acquire the write lock at a time, and no readers can acquire
-/// the lock while a writer holds it.
-///
-/// # Safety
-///
-/// - `rw` must point to a valid, initialized `RwLock`
-/// - The `RwLock` must not be concurrently modified except through its synchronized methods
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_rwlock_write_lock(rw: *mut RwLock) {
-    let rw = unsafe { &*rw };
-    rw.write_lock();
+impl<T: ?Sized> Drop for RwLockReadGuard<'_, T> {
+    fn drop(&mut self) {
+        self.inner_lock.read_unlock();
+    }
 }
 
-/// Attempts to lock the read/write lock for writing without waiting.
-///
-/// # Returns
-///
-/// * `true` if the lock was acquired successfully
-/// * `false` if there was contention
-///
-/// # Safety
-///
-/// - `rw` must point to a valid, initialized `RwLock`
-/// - The `RwLock` must not be concurrently modified except through its synchronized methods
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_rwlock_try_write_lock(rw: *mut RwLock) -> bool {
-    let rw = unsafe { &*rw };
-    rw.try_write_lock()
-}
-
-/// Unlocks the read/write lock for writing.
-///
-/// # Safety
-///
-/// - `rw` must point to a valid, initialized `RwLock`
-/// - The current thread must hold the write lock
-/// - The `RwLock` must not be concurrently modified except through its synchronized methods
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_rwlock_write_unlock(rw: *mut RwLock) {
-    let rw = unsafe { &*rw };
-    rw.write_unlock();
-}
-
-/// Checks if the write lock is held by the current thread.
-///
-/// # Returns
-///
-/// * `true` if the current thread holds the write lock
-/// * `false` if it does not hold the write lock or only holds read locks
-///
-/// # Safety
-///
-/// - `rw` must point to a valid, initialized `RwLock`
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_rwlock_is_write_lock_held_by_current_thread(
-    rw: *mut RwLock,
-) -> bool {
-    let rw = unsafe { &*rw };
-    rw.is_write_lock_held_by_current_thread()
-}
-
-/// Checks if the read/write lock is owned by the current thread.
-///
-/// # Returns
-///
-/// * `true` if the current thread holds the write lock or if it holds read locks
-///   acquired while it held the write lock
-/// * `false` if it does not
-///
-/// # Safety
-///
-/// - `rw` must point to a valid, initialized `RwLock`
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sync_rwlock_is_owned_by_current_thread(rw: *mut RwLock) -> bool {
-    let rw = unsafe { &*rw };
-    rw.is_owned_by_current_thread()
-}
-
-/// Get the current thread's kernel handle
-#[inline(always)]
-fn get_curr_thread_handle() -> Handle {
-    unsafe { nx_thread::raw::__nx_thread_get_current_thread_handle() }
+impl<T: ?Sized> Drop for RwLockWriteGuard<'_, T> {
+    fn drop(&mut self) {
+        self.lock.inner.write_unlock();
+    }
 }
