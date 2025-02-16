@@ -62,6 +62,5 @@ pub unsafe extern "C" fn __nx_sync_barrier_init(bar: *mut Barrier, thread_count:
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_barrier_wait(bar: *mut Barrier) {
-    let bar = unsafe { &*bar };
-    bar.wait();
+    unsafe { bar.read() }.wait();
 }

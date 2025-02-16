@@ -169,9 +169,8 @@ pub unsafe extern "C" fn __nx_sync_condvar_wait_timeout(
     mutex: *mut Mutex,
     timeout: u64,
 ) -> Result {
-    let condvar = unsafe { &*condvar };
     let mutex = unsafe { &*mutex };
-    condvar.wait_timeout(mutex, timeout)
+    unsafe { condvar.read() }.wait_timeout(mutex, timeout)
 }
 
 /// Waits on a condition variable indefinitely
@@ -205,9 +204,8 @@ pub unsafe extern "C" fn __nx_sync_condvar_wait(
     condvar: *mut Condvar,
     mutex: *mut Mutex,
 ) -> Result {
-    let condvar = unsafe { &*condvar };
     let mutex = unsafe { &*mutex };
-    condvar.wait_timeout(mutex, u64::MAX)
+    unsafe { condvar.read() }.wait_timeout(mutex, u64::MAX)
 }
 
 /// Wakes up a specified number of threads waiting on a condition variable.
@@ -231,8 +229,7 @@ pub unsafe extern "C" fn __nx_sync_condvar_wait(
 #[inline]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_condvar_wake(condvar: *mut Condvar, num: i32) -> Result {
-    let condvar = unsafe { &*condvar };
-    condvar.wake(num);
+    unsafe { condvar.read() }.wake(num);
     0
 }
 
@@ -250,8 +247,7 @@ pub unsafe extern "C" fn __nx_sync_condvar_wake(condvar: *mut Condvar, num: i32)
 #[inline]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_condvar_wake_one(condvar: *mut Condvar) -> Result {
-    let condvar = unsafe { &*condvar };
-    condvar.wake_one();
+    unsafe { condvar.read() }.wake_one();
     0
 }
 
@@ -269,8 +265,7 @@ pub unsafe extern "C" fn __nx_sync_condvar_wake_one(condvar: *mut Condvar) -> Re
 #[inline]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_condvar_wake_all(condvar: *mut Condvar) -> Result {
-    let condvar = unsafe { &*condvar };
-    condvar.wake_all();
+    unsafe { condvar.read() }.wake_all();
     0
 }
 

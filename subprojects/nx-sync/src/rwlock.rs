@@ -375,8 +375,7 @@ pub unsafe extern "C" fn __nx_sync_rwlock_init(rw: *mut RwLock) {
 /// - The `RwLock` must not be concurrently modified except through its synchronized methods
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_rwlock_read_lock(rw: *mut RwLock) {
-    let rw = unsafe { &*rw };
-    rw.read_lock();
+    unsafe { rw.read() }.read_lock()
 }
 
 /// Attempts to lock the read/write lock for reading without waiting.
@@ -392,8 +391,7 @@ pub unsafe extern "C" fn __nx_sync_rwlock_read_lock(rw: *mut RwLock) {
 /// - The `RwLock` must not be concurrently modified except through its synchronized methods
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_rwlock_try_read_lock(rw: *mut RwLock) -> bool {
-    let rw = unsafe { &*rw };
-    rw.try_read_lock()
+    unsafe { rw.read() }.try_read_lock()
 }
 
 /// Unlocks the read/write lock for reading.
@@ -405,8 +403,7 @@ pub unsafe extern "C" fn __nx_sync_rwlock_try_read_lock(rw: *mut RwLock) -> bool
 /// - The `RwLock` must not be concurrently modified except through its synchronized methods
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_rwlock_read_unlock(rw: *mut RwLock) {
-    let rw = unsafe { &*rw };
-    rw.read_unlock();
+    unsafe { rw.read() }.read_unlock()
 }
 
 /// Locks the read/write lock for writing.
@@ -420,8 +417,7 @@ pub unsafe extern "C" fn __nx_sync_rwlock_read_unlock(rw: *mut RwLock) {
 /// - The `RwLock` must not be concurrently modified except through its synchronized methods
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_rwlock_write_lock(rw: *mut RwLock) {
-    let rw = unsafe { &*rw };
-    rw.write_lock();
+    unsafe { rw.read() }.write_lock()
 }
 
 /// Attempts to lock the read/write lock for writing without waiting.
@@ -437,8 +433,7 @@ pub unsafe extern "C" fn __nx_sync_rwlock_write_lock(rw: *mut RwLock) {
 /// - The `RwLock` must not be concurrently modified except through its synchronized methods
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_rwlock_try_write_lock(rw: *mut RwLock) -> bool {
-    let rw = unsafe { &*rw };
-    rw.try_write_lock()
+    unsafe { rw.read() }.try_write_lock()
 }
 
 /// Unlocks the read/write lock for writing.
@@ -450,8 +445,7 @@ pub unsafe extern "C" fn __nx_sync_rwlock_try_write_lock(rw: *mut RwLock) -> boo
 /// - The `RwLock` must not be concurrently modified except through its synchronized methods
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_rwlock_write_unlock(rw: *mut RwLock) {
-    let rw = unsafe { &*rw };
-    rw.write_unlock();
+    unsafe { rw.read() }.write_unlock()
 }
 
 /// Checks if the write lock is held by the current thread.
@@ -468,8 +462,7 @@ pub unsafe extern "C" fn __nx_sync_rwlock_write_unlock(rw: *mut RwLock) {
 pub unsafe extern "C" fn __nx_sync_rwlock_is_write_lock_held_by_current_thread(
     rw: *mut RwLock,
 ) -> bool {
-    let rw = unsafe { &*rw };
-    rw.is_write_lock_held_by_current_thread()
+    unsafe { rw.read() }.is_write_lock_held_by_current_thread()
 }
 
 /// Checks if the read/write lock is owned by the current thread.
@@ -485,8 +478,7 @@ pub unsafe extern "C" fn __nx_sync_rwlock_is_write_lock_held_by_current_thread(
 /// - `rw` must point to a valid, initialized `RwLock`
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_rwlock_is_owned_by_current_thread(rw: *mut RwLock) -> bool {
-    let rw = unsafe { &*rw };
-    rw.is_owned_by_current_thread()
+    unsafe { rw.read() }.is_owned_by_current_thread()
 }
 
 /// Get the current thread's kernel handle

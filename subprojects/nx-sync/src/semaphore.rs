@@ -123,8 +123,7 @@ pub unsafe extern "C" fn __nx_sync_semaphore_init(sem: *mut Semaphore, count: u6
 /// * `sem` points to a valid, initialized Semaphore object
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_semaphore_signal(sem: *mut Semaphore) {
-    let sem = unsafe { &*sem };
-    sem.signal();
+    unsafe { sem.read() }.signal()
 }
 
 /// Decrements the semaphore's counter, blocking if no resources are available.
@@ -140,8 +139,7 @@ pub unsafe extern "C" fn __nx_sync_semaphore_signal(sem: *mut Semaphore) {
 /// * `sem` points to a valid, initialized Semaphore object
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_semaphore_wait(sem: *mut Semaphore) {
-    let sem = unsafe { &*sem };
-    sem.wait();
+    unsafe { sem.read() }.wait()
 }
 
 /// Attempts to decrement the semaphore's counter without blocking.
@@ -158,6 +156,5 @@ pub unsafe extern "C" fn __nx_sync_semaphore_wait(sem: *mut Semaphore) {
 /// * `sem` points to a valid, initialized Semaphore object
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_semaphore_try_wait(sem: *mut Semaphore) -> bool {
-    let sem = unsafe { &*sem };
-    sem.try_wait()
+    unsafe { sem.read() }.try_wait()
 }

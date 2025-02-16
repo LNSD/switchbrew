@@ -311,7 +311,7 @@ impl MutexTag {
 /// - Requires that `mutex` points to memory that can be safely written to
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_mutex_init(mutex: *mut Mutex) {
-    unsafe { mutex.write(Mutex::new()) };
+    unsafe { mutex.write(Mutex::new()) }
 }
 
 /// Locks the mutex.
@@ -323,8 +323,7 @@ pub unsafe extern "C" fn __nx_sync_mutex_init(mutex: *mut Mutex) {
 /// - Requires that `mutex` is properly aligned
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_mutex_lock(mutex: *mut Mutex) {
-    let mutex = unsafe { &*mutex };
-    mutex.lock();
+    unsafe { mutex.read() }.lock()
 }
 
 /// Attempts to lock the mutex without waiting.
@@ -340,8 +339,7 @@ pub unsafe extern "C" fn __nx_sync_mutex_lock(mutex: *mut Mutex) {
 /// Returns `true` if the mutex was successfully locked, `false` if it was already locked.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_mutex_try_lock(mutex: *mut Mutex) -> bool {
-    let mutex = unsafe { &*mutex };
-    mutex.try_lock()
+    unsafe { mutex.read() }.try_lock()
 }
 
 /// Unlocks the mutex.
@@ -353,8 +351,7 @@ pub unsafe extern "C" fn __nx_sync_mutex_try_lock(mutex: *mut Mutex) -> bool {
 /// - Requires that `mutex` is properly aligned
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_mutex_unlock(mutex: *mut Mutex) {
-    let mutex = unsafe { &*mutex };
-    mutex.unlock();
+    unsafe { mutex.read() }.unlock()
 }
 
 /// Get the current thread's kernel handle.
