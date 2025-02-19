@@ -27,7 +27,7 @@ pub unsafe fn cntpct_el0() -> u64 {
         asm!(
             "mrs {:x}, cntpct_el0", // Move from system register to general-purpose register
             out(reg) value,         // Output: Capture the value of the `cntpct_el0` register
-            options(nostack, nomem) // No stack or memory operations
+            options(nostack, nomem, preserves_flags)
         );
     }
     value
@@ -58,7 +58,7 @@ pub unsafe fn cntfrq_el0() -> u64 {
         asm!(
             "mrs {:x}, cntfrq_el0", // Move from system register to general-purpose register
             out(reg) value,         // Output: Capture the value of the `cntfrq_el0` register
-            options(nostack, nomem) // No stack or memory operations
+            options(nostack, nomem, preserves_flags)
         );
     }
     value
@@ -72,10 +72,10 @@ pub unsafe fn cntfrq_el0() -> u64 {
 /// Returns a pointer to the thread-local storage buffer.
 ///
 /// # References
-/// 
+///
 /// - [ARM TPIDRRO_ELO Register](https://developer.arm.com/documentation/ddi0601/2024-12/AArch64-Registers/TPIDRRO-EL0--EL0-Read-Only-Software-Thread-ID-Register)
 /// - [rust-embedded/aarch64-cpu: tpidrro_el0.rs](https://github.com/rust-embedded/aarch64-cpu/blob/main/src/registers/tpidrro_el0.rs)
-/// 
+///
 #[inline]
 pub unsafe fn tpidrro_el0() -> *mut c_void {
     let tls_ptr: *mut c_void;
@@ -84,7 +84,7 @@ pub unsafe fn tpidrro_el0() -> *mut c_void {
         asm!(
         "mrs {:x}, tpidrro_el0", // Move the value of tpidrro_el0 into tls_ptr
         out(reg) tls_ptr,        // Output: tls_ptr will hold the value of tpidrro_el0
-        options(nostack, nomem), // No stack or memory operands
+        options(nostack, nomem, preserves_flags)
         );
     }
     tls_ptr
