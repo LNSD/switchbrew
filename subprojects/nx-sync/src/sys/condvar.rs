@@ -7,7 +7,7 @@
 
 use nx_svc::{
     error::ToRawResultCode,
-    sync::{signal_process_wide_key, wait_process_wide_key_atomic, WaitProcessWideKeyError},
+    sync::{WaitProcessWideKeyError, signal_process_wide_key, wait_process_wide_key_atomic},
 };
 use nx_thread::raw::Handle;
 

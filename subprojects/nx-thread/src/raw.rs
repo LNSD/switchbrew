@@ -2,15 +2,17 @@
 
 use core::{ffi::c_void, ptr};
 
-use nx_cpu::tls::__nx_cpu_get_tls;
 use static_assertions::const_assert_eq;
+
+// TODO: Import from nx-svc
 pub type Handle = u32;
 
 pub const THREADVARS_MAGIC: u32 = 0x21545624; // ASCII: !TV$
 
 /// Size of the Thread-Local Region segment
 ///
-/// ## References
+/// # References
+///
 /// - [Switchbrew Wiki: Thread-Local Region](https://switchbrew.org/wiki/Thread_Local_Region)
 const TLR_SIZE: usize = 0x200;
 
@@ -50,7 +52,7 @@ const_assert_eq!(size_of::<ThreadVars>(), THREAD_VARS_SIZE);
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_thread_get_thread_vars() -> *mut ThreadVars {
     unsafe {
-        let tls = __nx_cpu_get_tls();
+        let tls = nx_cpu::tls::get_ptr();
         tls.add(TLR_SIZE - THREAD_VARS_SIZE) as *mut ThreadVars
     }
 }
@@ -65,7 +67,7 @@ pub unsafe extern "C" fn __nx_thread_get_thread_vars() -> *mut ThreadVars {
 pub unsafe extern "C" fn __nx_thread_get_current_thread_handle() -> Handle {
     unsafe {
         // Calculate the address of the thread handle: TLS + 0x1E4
-        let tls = __nx_cpu_get_tls();
+        let tls = nx_cpu::tls::get_ptr();
         let handle_ptr = tls.add(TLR_SIZE - THREAD_VARS_SIZE + 4) as *const Handle;
 
         ptr::read_volatile(handle_ptr)

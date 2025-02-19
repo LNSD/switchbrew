@@ -11,31 +11,19 @@
 //!
 //! ## References
 //! - [Switchbrew Wiki: Thread Local Region](https://switchbrew.org/wiki/Thread_Local_Region)
-//! - [ARM TPIDRRO_ELO Register](https://developer.arm.com/documentation/ddi0601/2024-12/AArch64-Registers/TPIDRRO-EL0--EL0-Read-Only-Software-Thread-ID-Register)
-//! - [rust-embedded/aarch64-cpu: tpidrro_el0.rs](https://github.com/rust-embedded/aarch64-cpu/blob/main/src/registers/tpidrro_el0.rs)
 //! - [switchbrew/libnx: tls.h](https://github.com/switchbrew/libnx/blob/master/nx/include/switch/arm/tls.h)
 
-use core::{arch::asm, ffi::c_void};
+use core::ffi::c_void;
 
-/// Gets the thread-local storage (TLS) buffer.
+use crate::control_regs;
+
+/// Get a raw-pointer to the thread-local storage (TLS) buffer.
 ///
 /// This function reads the `tpidrro_el0` system register, which holds the
 /// read-only thread pointer for the current thread.
 ///
-/// Returns a pointer to the thread-local storage buffer.
-///
-/// ## References
-/// - [ARM TPIDRRO_ELO Register](https://developer.arm.com/documentation/ddi0601/2024-12/AArch64-Registers/TPIDRRO-EL0--EL0-Read-Only-Software-Thread-ID-Register)
+/// Returns a raw-pointer to the thread-local storage buffer.
 #[inline]
-#[unsafe(no_mangle)]
-pub fn __nx_cpu_get_tls() -> *mut c_void {
-    let tls_ptr: *mut c_void;
-    unsafe {
-        asm!(
-            "mrs {:x}, tpidrro_el0", // Move the value of tpidrro_el0 into tls_ptr
-            out(reg) tls_ptr,        // Output: tls_ptr will hold the value of tpidrro_el0
-            options(nostack, nomem), // No stack or memory operands
-        );
-    }
-    tls_ptr
+pub fn get_ptr() -> *mut c_void {
+    unsafe { control_regs::tpidrro_el0() }
 }

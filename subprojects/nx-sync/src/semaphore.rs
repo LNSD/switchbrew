@@ -10,7 +10,7 @@
 //! - Coordinate multiple threads accessing shared resources
 //! - Limit concurrent access to certain operations
 //!
-//! When a permit is acquired, it is represented by a [`SemaphorePermit`] that automatically 
+//! When a permit is acquired, it is represented by a [`SemaphorePermit`] that automatically
 //! releases the permit back to the semaphore when dropped.
 
 use core::fmt;

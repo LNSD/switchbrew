@@ -4,7 +4,13 @@
 
 #![no_std]
 
+#[cfg(not(target_arch = "aarch64"))]
+compile_error!("nx-cpu only supports aarch64 CPUs");
+
+pub mod barrier;
+pub mod control_regs;
 pub mod counter;
+mod ffi;
 pub mod tls;
 
 /// #[panic_handler]

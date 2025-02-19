@@ -46,7 +46,7 @@ impl Barrier {
     ///   Must be greater than 0.
     ///
     /// # Panics
-    /// 
+    ///
     /// Will not panic as long as `thread_count` is greater than 0.
     pub fn new(thread_count: u64) -> Self {
         Barrier {
@@ -63,7 +63,7 @@ impl Barrier {
     /// unblocked and the barrier will be reset, ready for reuse.
     ///
     /// # Panics
-    /// 
+    ///
     /// Panics if the internal counter would overflow, which is extremely unlikely in
     /// practice as it would require more threads than the maximum value of u64.
     pub fn wait(&self) {
@@ -85,12 +85,12 @@ impl Barrier {
 /// Initializes a new barrier with the specified thread count.
 ///
 /// # Arguments
-/// 
+///
 /// * `bar` - Pointer to uninitialized barrier memory
 /// * `thread_count` - Number of threads that must reach the barrier before any can proceed
 ///
 /// # Safety
-/// 
+///
 /// This function is unsafe because:
 /// * `bar` must point to valid memory that can hold a [`Barrier`]
 #[unsafe(no_mangle)]
@@ -101,11 +101,11 @@ pub unsafe extern "C" fn __nx_sync_barrier_init(bar: *mut Barrier, thread_count:
 /// Waits on the barrier until all threads have reached it.
 ///
 /// # Arguments
-/// 
+///
 /// * `bar` - Pointer to an initialized barrier
 ///
 /// # Safety
-/// 
+///
 /// This function is unsafe because:
 /// * `bar` must point to a valid, initialized [`Barrier`]
 #[unsafe(no_mangle)]
