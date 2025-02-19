@@ -5,4 +5,5 @@ members = [
     "subprojects/nx-svc",
     "subprojects/nx-sync",
     "subprojects/nx-thread",
+    "subprojects/nx-time",
 ]
