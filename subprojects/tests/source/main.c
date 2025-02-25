@@ -12,6 +12,7 @@ static TestSuiteFn test_suites[] = {
     // sync
     sync_mutex_suite,
     sync_condvar_suite,
+    sync_barrier_suite,
 };
 
 int main()

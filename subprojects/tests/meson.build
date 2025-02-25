@@ -37,6 +37,8 @@ c_src = files(
     'source/sync/mutex.c',
     'source/sync/condvar.h',
     'source/sync/condvar.c',
+    'source/sync/barrier.h',
+    'source/sync/barrier.c',
 )
 
 # Compiler (and linker) options
@@ -101,7 +103,6 @@ if 'NSP' == bundle_type
                       '--output', '@OUTPUT0@',
                       '--tmp-dir', '@PRIVATE_DIR@'
                   ] + bundle_opts,
-                  depends : romfs_tgt,
                   build_by_default : true)
 elif 'NRO' == bundle_type
     # Check for required tools

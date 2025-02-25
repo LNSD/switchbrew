@@ -35,7 +35,7 @@ typedef void (*TestSuiteFn)(void);
  * @param suite_name The name of the test suite.
  */
 #define TEST_SUITE(suite_name) \
-    printf("\n" CONSOLE_CYAN "TEST SUITE:" CONSOLE_RESET " " suite_name "\n\n")
+    printf("\n" CONSOLE_CYAN "TEST SUITE:" CONSOLE_RESET " " suite_name "\n\n");
 
 /**
  * Test case declaration.
