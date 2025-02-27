@@ -39,6 +39,8 @@ c_src = files(
     'source/sync/condvar.c',
     'source/sync/barrier.h',
     'source/sync/barrier.c',
+    'source/sync/semaphore.h',
+    'source/sync/semaphore.c',
 )
 
 # Compiler (and linker) options
