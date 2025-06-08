@@ -3,7 +3,7 @@ default:
     @just --list
 
 # Build directory (can be overridden with just builddir=<path> <task>)
-build_dir := "build"
+build_dir := "buildDir"
 
 # Setup meson build directory
 meson-setup:
