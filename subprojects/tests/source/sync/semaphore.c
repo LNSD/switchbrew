@@ -21,7 +21,7 @@ static bool g_test_0001_task_completed = false;
 /**
  * Thread function for Test #0001
  */
-static void test_0001_thread_func(void *arg) {
+void test_0001_semaphore_thread_func(void *arg) {
     // Wait on the semaphore
     semaphoreWait(&g_test_0001_semaphore);
     
@@ -44,7 +44,7 @@ test_rc_t test_0001_semaphore_wait_signal_single_thread(void) {
 
     // Create a thread
     Thread thread;
-    rc = threadCreate(&thread, test_0001_thread_func, NULL, NULL, 0x10000, 0x2C, -2);
+    rc = threadCreate(&thread, test_0001_semaphore_thread_func, NULL, NULL, 0x10000, 0x2C, -2);
     if (R_FAILED(rc)) {
         goto test_cleanup;
     }
@@ -118,7 +118,7 @@ static uint32_t g_test_0002_completed_threads = 0;
 /**
  * Thread function for Test #0002
  */
-static void test_0002_thread_func(void *arg) {
+void test_0002_semaphore_thread_func(void *arg) {
     // Wait on the semaphore
     semaphoreWait(&g_test_0002_semaphore);
     
@@ -155,7 +155,7 @@ test_rc_t test_0002_semaphore_multiple_threads_initial_count(void) {
     // Create threads
     Thread threads[TEST_0002_NUM_THREADS];
     for (int i = 0; i < TEST_0002_NUM_THREADS; i++) {
-        rc = threadCreate(&threads[i], test_0002_thread_func, NULL, NULL, 0x10000, 0x2C, -2);
+        rc = threadCreate(&threads[i], test_0002_semaphore_thread_func, NULL, NULL, 0x10000, 0x2C, -2);
         if (R_FAILED(rc)) {
             goto test_cleanup;
         }
@@ -256,7 +256,7 @@ static bool g_test_0003_producers_done = false; // Flag to signal consumers to e
 /**
  * Producer thread function for Test #0003
  */
-static void test_0003_producer_thread_func(void *arg) {
+void test_0003_semaphore_producer_thread_func(void *arg) {
     for (int i = 0; i < TEST_0003_ITEMS_PER_PRODUCER; i++) {
         // Simulate production time
         threadSleepMs(TEST_0003_PRODUCER_DELAY_MS);
@@ -278,7 +278,7 @@ static void test_0003_producer_thread_func(void *arg) {
 /**
  * Consumer thread function for Test #0003
  */
-static void test_0003_consumer_thread_func(void *arg) {
+void test_0003_semaphore_consumer_thread_func(void *arg) {
     while (true) {
         // Check if producers are done and buffer is empty
         mutexLock(&g_test_0003_buffer_mutex);
@@ -332,7 +332,7 @@ test_rc_t test_0003_semaphore_producer_consumer(void) {
     // Create producer threads
     Thread producers[TEST_0003_NUM_PRODUCERS];
     for (int i = 0; i < TEST_0003_NUM_PRODUCERS; i++) {
-        rc = threadCreate(&producers[i], test_0003_producer_thread_func, NULL, NULL, 0x10000, 0x2C, -2);
+        rc = threadCreate(&producers[i], test_0003_semaphore_producer_thread_func, NULL, NULL, 0x10000, 0x2C, -2);
         if (R_FAILED(rc)) {
             goto test_cleanup;
         }
@@ -341,7 +341,7 @@ test_rc_t test_0003_semaphore_producer_consumer(void) {
     // Create consumer threads
     Thread consumers[TEST_0003_NUM_CONSUMERS];
     for (int i = 0; i < TEST_0003_NUM_CONSUMERS; i++) {
-        rc = threadCreate(&consumers[i], test_0003_consumer_thread_func, NULL, NULL, 0x10000, 0x2C, -2);
+        rc = threadCreate(&consumers[i], test_0003_semaphore_consumer_thread_func, NULL, NULL, 0x10000, 0x2C, -2);
         if (R_FAILED(rc)) {
             goto test_cleanup;
         }

@@ -25,7 +25,7 @@ static int64_t g_test_0001_shared_tag = -1;
 /**
  * Thread function for Test #0001
  */
-void test_0001_thread_func(void *arg) {
+void test_0001_mutex_thread_func(void *arg) {
     const int64_t num = (int64_t) arg;
 
     mutexLock(&g_test_0001_mutex);
@@ -46,7 +46,7 @@ uint32_t test_0001_mutex_lock_unlock_single_thread(void) {
 
     // Create a thread
     Thread thread;
-    rc = threadCreate(&thread, test_0001_thread_func, (void *) TEST_0001_THREAD_TAG, NULL, 0x10000, 0x2C, -2);
+    rc = threadCreate(&thread, test_0001_mutex_thread_func, (void *) TEST_0001_THREAD_TAG, NULL, 0x10000, 0x2C, -2);
     if (R_FAILED(rc)) {
         goto test_cleanup;
     }
@@ -99,7 +99,7 @@ typedef struct {
 *
 * Sets the shared variable to the tag after a delay.
 */
-void test_0002_thread_func(void *arg) {
+void test_0002_mutex_thread_func(void *arg) {
     const Test0002_ThreadArgs *args = arg;
 
     threadSleepMs(args->lock_delay_ms);
@@ -135,12 +135,12 @@ uint32_t test_0002_mutex_two_threads_no_lock_overlap(void) {
         .lock_delay_ms = TEST_0002_THREAD_B_LOCK_DELAY_MS
     };
 
-    rc = threadCreate(&thread_a, test_0002_thread_func, &thread_a_args, NULL, 0x10000, 0x2C, -2);
+    rc = threadCreate(&thread_a, test_0002_mutex_thread_func, &thread_a_args, NULL, 0x10000, 0x2C, -2);
     if (R_FAILED(rc)) {
         goto test_cleanup;
     }
 
-    rc = threadCreate(&thread_b, test_0002_thread_func, &thread_b_args, NULL, 0x10000, 0x2C, -2);
+    rc = threadCreate(&thread_b, test_0002_mutex_thread_func, &thread_b_args, NULL, 0x10000, 0x2C, -2);
     if (R_FAILED(rc)) {
         goto test_cleanup;
     }
@@ -215,7 +215,7 @@ typedef struct {
 /**
 * Thread function for Test #0003
 */
-void test_0003_thread_func(void *arg) {
+void test_0003_mutex_thread_func(void *arg) {
     const Test0003_ThreadArgs *args = arg;
 
     threadSleepMs(args->lock_delay_ms);
@@ -254,12 +254,12 @@ uint32_t test_0003_mutex_two_threads_with_lock_overlap(void) {
         .unlock_delay_ms = TEST_0003_THREAD_B_UNLOCK_DELAY_MS
     };
 
-    rc = threadCreate(&thread_a, test_0003_thread_func, &thread_a_args, NULL, 0x10000, 0x2C, -2);
+    rc = threadCreate(&thread_a, test_0003_mutex_thread_func, &thread_a_args, NULL, 0x10000, 0x2C, -2);
     if (R_FAILED(rc)) {
         goto test_cleanup;
     }
 
-    rc = threadCreate(&thread_b, test_0003_thread_func, &thread_b_args, NULL, 0x10000, 0x2C, -2);
+    rc = threadCreate(&thread_b, test_0003_mutex_thread_func, &thread_b_args, NULL, 0x10000, 0x2C, -2);
     if (R_FAILED(rc)) {
         goto test_cleanup;
     }
@@ -398,7 +398,7 @@ typedef struct {
 /**
 * Thread function for Test #0004
 */
-void test_0004_thread_func(void *arg) {
+void test_0004_mutex_thread_func(void *arg) {
     const Test0004_ThreadArgs *args = arg;
 
     threadSleepMs(args->lock_delay_ms);
@@ -444,17 +444,17 @@ uint32_t test_0004_mutex_multiple_threads_same_priority(void) {
         .unlock_delay_ms = TEST_0004_THREAD_C_UNLOCK_DELAY_MS
     };
 
-    rc = threadCreate(&thread_a, test_0004_thread_func, &thread_a_args, NULL, 0x10000, 0x2C, -2);
+    rc = threadCreate(&thread_a, test_0004_mutex_thread_func, &thread_a_args, NULL, 0x10000, 0x2C, -2);
     if (R_FAILED(rc)) {
         goto test_cleanup;
     }
 
-    rc = threadCreate(&thread_b, test_0004_thread_func, &thread_b_args, NULL, 0x10000, 0x2C, -2);
+    rc = threadCreate(&thread_b, test_0004_mutex_thread_func, &thread_b_args, NULL, 0x10000, 0x2C, -2);
     if (R_FAILED(rc)) {
         goto test_cleanup;
     }
 
-    rc = threadCreate(&thread_c, test_0004_thread_func, &thread_c_args, NULL, 0x10000, 0x2C, -2);
+    rc = threadCreate(&thread_c, test_0004_mutex_thread_func, &thread_c_args, NULL, 0x10000, 0x2C, -2);
     if (R_FAILED(rc)) {
         goto test_cleanup;
     }
@@ -644,7 +644,7 @@ typedef struct {
 /**
 * Thread function for Test #0005
 */
-void test_0005_thread_func(void *arg) {
+void test_0005_mutex_thread_func(void *arg) {
     const Test0005_ThreadArgs *args = arg;
 
     threadSleepMs(args->lock_delay_ms);
@@ -692,17 +692,17 @@ uint32_t test_0005_mutex_multiple_threads_different_priority(void) {
         .unlock_delay_ms = TEST_0005_THREAD_C_UNLOCK_DELAY_MS
     };
 
-    rc = threadCreate(&thread_a, test_0005_thread_func, &thread_a_args, NULL, 0x10000, TEST_0005_THREAD_A_PRIORITY, -2);
+    rc = threadCreate(&thread_a, test_0005_mutex_thread_func, &thread_a_args, NULL, 0x10000, TEST_0005_THREAD_A_PRIORITY, -2);
     if (R_FAILED(rc)) {
         goto test_cleanup;
     }
 
-    rc = threadCreate(&thread_b, test_0005_thread_func, &thread_b_args, NULL, 0x10000, TEST_0005_THREAD_B_PRIORITY, -2);
+    rc = threadCreate(&thread_b, test_0005_mutex_thread_func, &thread_b_args, NULL, 0x10000, TEST_0005_THREAD_B_PRIORITY, -2);
     if (R_FAILED(rc)) {
         goto test_cleanup;
     }
 
-    rc = threadCreate(&thread_c, test_0005_thread_func, &thread_c_args, NULL, 0x10000, TEST_0005_THREAD_C_PRIORITY, -2);
+    rc = threadCreate(&thread_c, test_0005_mutex_thread_func, &thread_c_args, NULL, 0x10000, TEST_0005_THREAD_C_PRIORITY, -2);
     if (R_FAILED(rc)) {
         goto test_cleanup;
     }
