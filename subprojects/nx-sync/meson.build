@@ -47,3 +47,6 @@ nx_sync_dep = declare_dependency(
     link_with : nx_sync_tgt[0],
     dependencies : deps,
 )
+
+# Linker script override for sync functions
+nx_sync_ld_override = meson.current_source_dir() / 'sync_redirect.ld'
