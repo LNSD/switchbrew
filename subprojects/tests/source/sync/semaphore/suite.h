@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../harness.h"
+#include "../../harness.h"
 
 /**
  * Test semaphore wait and signal in a single thread.

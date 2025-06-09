@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../harness.h"
+#include "../../harness.h"
 
 /**
  * This test creates multiple threads that wait on a barrier.

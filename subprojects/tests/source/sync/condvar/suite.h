@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../harness.h"
+#include "../../harness.h"
 
 /**
  * A thread acquires a mutex, calls `wait()` on the condition variable, and another thread calls

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../harness.h"
+#include "../../harness.h"
 
 /**
  * Test rwlock basic read lock functionality in a single thread.
@@ -100,6 +100,18 @@ test_rc_t test_0008_rwlock_reads_first_unlock(void);
 test_rc_t test_0009_rwlock_mixed_unlock_order(void);
 
 /**
+ * Test RwLock ownership check functions.
+ * 
+ * This test covers:
+ * - Write Lock Ownership: Tests rwlockIsWriteLockHeldByCurrentThread() functionality
+ * - General Ownership: Tests rwlockIsOwnedByCurrentThread() functionality
+ * - Thread Isolation: Verifies ownership functions work correctly across different threads
+ * - Lock State Validation: Ensures ownership checks work with various lock combinations
+ * - Cross-Thread Verification: Tests ownership from both current and other thread perspectives
+ */
+test_rc_t test_0010_rwlock_ownership_checks(void);
+
+/**
  * Test suite for sync/rwlock.
  */
 static void sync_rwlock_suite(void) {
@@ -140,5 +152,9 @@ static void sync_rwlock_suite(void) {
     TEST_CASE(
         "Test 0009: rwlock_mixed_unlock_order",
         test_0009_rwlock_mixed_unlock_order
+    )
+    TEST_CASE(
+        "Test 0010: rwlock_ownership_checks",
+        test_0010_rwlock_ownership_checks
     )
 } 

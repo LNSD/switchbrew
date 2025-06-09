@@ -1,7 +1,7 @@
 #pragma once
 
-#include "mutex.h"
-#include "condvar.h"
-#include "barrier.h"
-#include "rwlock.h"
-#include "semaphore.h"
+#include "mutex/suite.h"
+#include "condvar/suite.h"
+#include "barrier/suite.h"
+#include "rwlock/suite.h"
+#include "semaphore/suite.h"
