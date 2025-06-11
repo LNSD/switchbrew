@@ -9,8 +9,6 @@ compile_error!("nx-cpu only supports aarch64 CPUs");
 
 pub mod barrier;
 pub mod control_regs;
-mod ffi;
-pub mod tls;
 
 /// #[panic_handler]
 ///

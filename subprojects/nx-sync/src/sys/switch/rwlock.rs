@@ -357,5 +357,5 @@ impl PartialEq<Handle> for WriteOwnerTag {
 /// Get the current thread's kernel handle
 #[inline(always)]
 fn get_curr_thread_handle() -> Handle {
-    unsafe { nx_thread::raw::__nx_thread_get_current_thread_handle() }
+    nx_thread::sys::thread_vars::get_current_thread_handle()
 }

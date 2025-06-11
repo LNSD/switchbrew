@@ -9,7 +9,7 @@ use nx_svc::{
     error::ToRawResultCode,
     raw::Handle,
     result::ResultCode,
-    sync::{signal_process_wide_key, wait_process_wide_key_atomic, WaitProcessWideKeyError},
+    sync::{WaitProcessWideKeyError, signal_process_wide_key, wait_process_wide_key_atomic},
 };
 
 use super::Mutex;
@@ -122,5 +122,5 @@ impl Default for Condvar {
 /// Get the current thread's kernel handle
 #[inline(always)]
 fn get_curr_thread_handle() -> Handle {
-    unsafe { nx_thread::raw::__nx_thread_get_current_thread_handle() }
+    nx_thread::sys::thread_vars::get_current_thread_handle()
 }

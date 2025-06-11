@@ -1,6 +1,7 @@
 #![no_std]
 
-pub mod raw;
+mod ffi;
+pub mod sys;
 
 /// #[panic_handler]
 ///

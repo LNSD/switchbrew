@@ -15,15 +15,24 @@
 
 use core::ffi::c_void;
 
-use crate::control_regs;
+use nx_cpu::control_regs;
 
-/// Get a raw-pointer to the thread-local storage (TLS) buffer.
+/// Get a raw pointer to the Thread Local Region (TLR) buffer.
 ///
 /// This function reads the `tpidrro_el0` system register, which holds the
-/// read-only thread pointer for the current thread.
+/// read-only thread pointer for the current thread. The returned pointer
+/// points to a 512-byte (0x200) Thread Local Region.
 ///
-/// Returns a raw-pointer to the thread-local storage buffer.
+/// # Returns
+///
+/// Raw pointer to the 512-byte Thread Local Region (TLR) for the current thread.
+///
+/// # Safety
+///
+/// This function is safe to call, but dereferencing the returned pointer
+/// requires careful attention to the TLR memory layout.
+///
 #[inline]
-pub fn get_ptr() -> *mut c_void {
+pub fn get_tlr_ptr() -> *mut c_void {
     unsafe { control_regs::tpidrro_el0() }
 }

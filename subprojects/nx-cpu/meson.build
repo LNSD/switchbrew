@@ -3,9 +3,6 @@ project('nx-cpu', version : '0.1.0')
 cargo = find_program('cargo', required : true)
 
 ## Static library
-# Source files
-inc = include_directories('include')
-
 # Target
 nx_cpu_tgt = custom_target(
     'nx-cpu',
@@ -22,6 +19,5 @@ nx_cpu_tgt = custom_target(
 )
 
 nx_cpu_dep = declare_dependency(
-    include_directories : inc,
     link_with : nx_cpu_tgt[0],
 )
