@@ -42,3 +42,5 @@ nx_thread_dep = declare_dependency(
     link_with : nx_thread_tgt[0],
     dependencies : deps,
 )
+# Linker script override for thread functions
+nx_thread_ld_override = meson.current_source_dir() / 'thread_redirect.ld'
