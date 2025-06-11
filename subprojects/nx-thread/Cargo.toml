@@ -11,6 +11,8 @@ doctest = false
 bench = false
 
 [dependencies]
+nx-svc = { version = "0.1.0", path = "../nx-svc" }
+nx-sync = { version = "0.1.0", path = "../nx-sync" }
 nx-thread-tls = { version = "0.1.0", path = "../nx-thread-tls" }
 panic-abort = "0.3.2"
 panic-halt = "1.0.0"

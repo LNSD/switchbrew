@@ -2,6 +2,7 @@
 
 mod ffi;
 pub mod sys;
+pub mod virtmem;
 
 /// #[panic_handler]
 ///
