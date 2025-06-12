@@ -6,13 +6,13 @@ cargo = find_program('cargo', required : true)
 # Dependencies
 #------------------------------------------------
 # Rust dependencies here ar just informative so Mesom can build the dependencies in the correct order
-# nx-cpu
-nx_cpu_proj = subproject('nx-cpu')
-nx_cpu_dep = nx_cpu_proj.get_variable('nx_cpu_dep')
+# nx-thread-tls
+nx_thread_tls_proj = subproject('nx-thread-tls')
+nx_thread_tls_dep = nx_thread_tls_proj.get_variable('nx_thread_tls_dep')
 
 # Dependencies list
 deps = [
-    nx_cpu_dep,
+    nx_thread_tls_dep,
 ]
 
 #------------------------------------------------

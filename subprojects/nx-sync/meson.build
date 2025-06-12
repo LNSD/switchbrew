@@ -11,13 +11,13 @@ nx_svc_proj = subproject('nx-svc')
 nx_svc_dep = nx_svc_proj.get_variable('nx_svc_dep')
 
 # nx-thread
-nx_thread_proj = subproject('nx-thread')
-nx_thread_dep = nx_thread_proj.get_variable('nx_thread_dep')
+nx_thread_tls_proj = subproject('nx-thread-tls')
+nx_thread_tls_dep = nx_thread_tls_proj.get_variable('nx_thread_tls_dep')
 
 # Dependencies list
 deps = [
-    nx_thread_dep,
     nx_svc_dep,
+    nx_thread_tls_dep,
 ]
 
 #------------------------------------------------

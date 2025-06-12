@@ -1,2 +1,1 @@
-pub mod thread_vars;
-pub mod tls;
+pub use nx_thread_tls::sys::*;

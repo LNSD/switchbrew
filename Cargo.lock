@@ -24,7 +24,7 @@ name = "nx-sync"
 version = "0.1.0"
 dependencies = [
  "nx-svc",
- "nx-thread",
+ "nx-thread-tls",
  "panic-abort",
  "panic-halt",
  "static_assertions",
@@ -34,7 +34,7 @@ dependencies = [
 name = "nx-thread"
 version = "0.1.0"
 dependencies = [
- "nx-cpu",
+ "nx-thread-tls",
  "panic-abort",
  "panic-halt",
  "static_assertions",

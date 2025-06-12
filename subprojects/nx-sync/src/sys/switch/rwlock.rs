@@ -5,6 +5,7 @@
 use core::cell::UnsafeCell;
 
 use nx_svc::raw::{Handle, INVALID_HANDLE};
+use nx_thread_tls::sys::thread_vars;
 use static_assertions::const_assert_eq;
 
 use super::{Condvar, Mutex};
@@ -357,5 +358,5 @@ impl PartialEq<Handle> for WriteOwnerTag {
 /// Get the current thread's kernel handle
 #[inline(always)]
 fn get_curr_thread_handle() -> Handle {
-    nx_thread::sys::thread_vars::get_current_thread_handle()
+    thread_vars::get_current_thread_handle()
 }

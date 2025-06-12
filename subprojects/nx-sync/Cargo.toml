@@ -12,7 +12,7 @@ bench = false
 
 [dependencies]
 nx-svc = { version = "0.1.0", path = "../nx-svc" }
-nx-thread = { version = "0.1.0", path = "../nx-thread" }
+nx-thread-tls = { version = "0.1.0", path = "../nx-thread-tls" }
 panic-abort = "0.3.2"
 panic-halt = "1.0.0"
 static_assertions = "1.1.0"

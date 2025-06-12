@@ -24,6 +24,7 @@ use nx_svc::{
     raw::{BreakReason, Handle, INVALID_HANDLE},
     sync::{HANDLE_WAIT_MASK, arbitrate_lock, arbitrate_unlock},
 };
+use nx_thread_tls::sys::thread_vars;
 use static_assertions::const_assert_eq;
 
 /// A mutual exclusion primitive useful for protecting shared data
@@ -311,5 +312,5 @@ impl MutexTag {
 /// Get the current thread's kernel handle.
 #[inline(always)]
 fn get_curr_thread_handle() -> Handle {
-    nx_thread::sys::thread_vars::get_current_thread_handle()
+    thread_vars::get_current_thread_handle()
 }
