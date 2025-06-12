@@ -19,6 +19,9 @@ endif
 if get_option('use_nx_thread').disabled()
     subproject('nx-thread')
 endif
+if get_option('use_nx_thread_tls').disabled()
+    subproject('nx-thread-tls')
+endif
 if get_option('use_nx_sync').disabled()
     subproject('nx-sync')
 endif

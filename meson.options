@@ -42,6 +42,13 @@ option(
 )
 
 option(
+    'use_nx_thread_tls',
+    type : 'feature', value : 'disabled',
+    description : 'Use nx-thread-tls instead of libnx implementation',
+    yield : true
+)
+
+option(
     'use_nx_time',
     type : 'feature', value : 'disabled',
     description : 'Use nx-time instead of libnx implementation',

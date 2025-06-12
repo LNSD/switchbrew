@@ -41,6 +41,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nx-thread-tls"
+version = "0.1.0"
+dependencies = [
+ "nx-cpu",
+ "panic-abort",
+ "panic-halt",
+ "static_assertions",
+]
+
+[[package]]
 name = "nx-time"
 version = "0.1.0"
 dependencies = [

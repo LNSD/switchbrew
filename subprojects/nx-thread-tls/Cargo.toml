@@ -1,0 +1,17 @@
+[package]
+name = "nx-thread-tls"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "nx_thread_tls"
+crate-type = ["rlib", "staticlib"]
+test = false
+doctest = false
+bench = false
+
+[dependencies]
+nx-cpu = { version = "0.1.0", path = "../nx-cpu" }
+panic-abort = "0.3.2"
+panic-halt = "1.0.0"
+static_assertions = "1.1.0"
