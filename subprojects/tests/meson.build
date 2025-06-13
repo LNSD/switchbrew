@@ -36,7 +36,9 @@ nx_default_icon = nx_proj.get_variable('nx_default_icon')
 #---------------------------------------------------------------------------------
 # Source files
 c_src = files(
-    'source/main.c',
+    'source/rand/suite.h',
+    'source/rand/test_0001_rand_get_fills_buffers_with_random_data.c',
+    'source/rand/test_0002_rand_get64_returns_different_values.c',
     'source/sync/suite.h',
     'source/sync/mutex/suite.h',
     'source/sync/mutex/test_0001_mutex_lock_unlock_single_thread.c',
@@ -66,6 +68,7 @@ c_src = files(
     'source/sync/semaphore/test_0001_semaphore_wait_signal_single_thread.c',
     'source/sync/semaphore/test_0002_semaphore_multiple_threads_initial_count.c',
     'source/sync/semaphore/test_0003_semaphore_producer_consumer.c',
+    'source/main.c',
 )
 
 # Compiler (and linker) options

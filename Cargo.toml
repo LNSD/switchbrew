@@ -7,6 +7,7 @@ members = [
     "subprojects/nx-thread",
     "subprojects/nx-thread-tls",
     "subprojects/nx-time",
+    "subprojects/nx-rand",
 ]
 
 

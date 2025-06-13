@@ -54,3 +54,10 @@ option(
     description : 'Use nx-time instead of libnx implementation',
     yield : true
 )
+
+option(
+    'use_nx_rand',
+    type : 'feature', value : 'disabled',
+    description : 'Use nx-rand instead of libnx implementation',
+    yield : true
+)

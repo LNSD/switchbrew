@@ -27,6 +27,7 @@
 pub mod code;
 pub mod debug;
 pub mod error;
+pub mod misc;
 pub mod raw;
 pub mod result;
 pub mod sync;

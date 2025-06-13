@@ -1,0 +1,19 @@
+[package]
+name = "nx-rand"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "nx_rand"
+crate-type = ["rlib", "staticlib"]
+test = false
+doctest = false
+bench = false
+
+[dependencies]
+nx-svc = { version = "0.1.0", path = "../nx-svc" }
+rand = { version = "0.8", default-features = false }
+rand_chacha = { version = "0.3", default-features = false }
+panic-abort = "0.3.2"
+panic-halt = "1.0.0"
+static_assertions = "1.1.0" 

@@ -1552,6 +1552,41 @@ pub unsafe extern "C" fn __nx_svc_return_from_exception(res: ResultCode) -> ! {
     }
 }
 
+/// Information types for [`__nx_svc_get_info`]
+#[repr(u32)]
+pub enum InfoTypeId0 {
+    CoreMask = 0,
+    PriorityMask = 1,
+    AliasRegionAddress = 2,
+    AliasRegionSize = 3,
+    HeapRegionAddress = 4,
+    HeapRegionSize = 5,
+    TotalMemorySize = 6,
+    UsedMemorySize = 7,
+    DebuggerAttached = 8,
+    ResourceLimit = 9,
+    IdleTickCount = 10,
+    RandomEntropy = 11,
+    AslrRegionAddress = 12,
+    AslrRegionSize = 13,
+    StackRegionAddress = 14,
+    StackRegionSize = 15,
+    SystemResourceSizeTotal = 16,
+    SystemResourceSizeUsed = 17,
+    ProgramId = 18,
+    InitialProcessIdRange = 19,
+    UserExceptionContextAddress = 20,
+    TotalNonSystemMemorySize = 21,
+    UsedNonSystemMemorySize = 22,
+    IsApplication = 23,
+    FreeThreadCount = 24,
+    ThreadTickCount = 25,
+    IsSvcPermitted = 26,
+    IoRegionHint = 27,
+    AliasRegionExtraSize = 28,
+    TransferMemoryHint = 34,
+    ThreadTickCountDeprecated = 0xF0000002,
+}
 /// Retrieves information about the system, or a certain kernel object.
 ///
 /// `Result svcGetInfo(uint64_t* out, uint32_t id0, Handle handle, uint64_t id1);`

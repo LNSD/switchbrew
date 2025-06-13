@@ -3,12 +3,15 @@
 #include <switch.h>
 
 #include "harness.h"
+#include "rand/suite.h"
 #include "sync/suite.h"
 
 /**
  * Test suites
  */
 static TestSuiteFn test_suites[] = {
+    // random
+    rand_suite,
     // sync
     sync_mutex_suite,
     sync_condvar_suite,
