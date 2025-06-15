@@ -3,7 +3,7 @@
 //! This module provides safe wrappers around memory-related system calls for querying
 //! memory properties and unmapping memory.
 
-use core::ffi::c_void;
+use core::{ffi::c_void, ptr};
 
 use super::{
     error::{KernelError as KError, ResultCode, ToRawResultCode},
@@ -13,6 +13,121 @@ use super::{
 
 /// Page information
 pub type PageInfo = u32;
+
+/// Sets the process heap to a given size.
+///
+/// It can extend and shrink the heap.
+///
+/// Returns the address of the heap (randomized and fixed by the kernel) if the heap was
+/// successfully set, or a [`SetHeapSizeError`] on failure.
+pub fn set_heap_size(size: usize) -> Result<*mut c_void, SetHeapSizeError> {
+    let mut addr = ptr::null_mut();
+    let rc = unsafe { raw::__nx_svc_set_heap_size(&mut addr, size) };
+    RawResult::from_raw(rc).map(addr, |rc| match rc.description() {
+        desc if KError::InvalidSize == desc => SetHeapSizeError::InvalidSize,
+        desc if KError::OutOfResource == desc => SetHeapSizeError::OutOfResource,
+        desc if KError::OutOfMemory == desc => SetHeapSizeError::OutOfMemory,
+        desc if KError::InvalidCurrentMemory == desc => SetHeapSizeError::InvalidCurrentMemory,
+        desc if KError::InvalidNewMemoryPermission == desc => {
+            SetHeapSizeError::InvalidNewMemoryPermission
+        }
+        desc if KError::InvalidMemoryRegion == desc => SetHeapSizeError::InvalidMemoryRegion,
+        desc if KError::InvalidState == desc => SetHeapSizeError::InvalidState,
+        desc if KError::LimitReached == desc => SetHeapSizeError::LimitReached,
+        _ => SetHeapSizeError::Unknown(rc.into()),
+    })
+}
+
+/// Error type for set_heap_size operations.
+#[derive(Debug, thiserror::Error)]
+pub enum SetHeapSizeError {
+    /// The size parameter is invalid.
+    /// 
+    /// This occurs when:
+    /// - The size is not aligned to 4KB
+    /// - The size is 0
+    /// - The size would cause an overflow
+    #[error("Invalid size")]
+    InvalidSize,
+
+    /// System resources are exhausted.
+    /// 
+    /// This occurs when:
+    /// - The system has no more physical memory available
+    /// - The system has no more virtual memory available
+    #[error("Out of resource")]
+    OutOfResource,
+
+    /// Not enough memory available.
+    /// 
+    /// This occurs when:
+    /// - The process has reached its memory limit
+    /// - The system cannot allocate the requested amount of memory
+    #[error("Out of memory")]
+    OutOfMemory,
+
+    /// Current memory state is invalid.
+    /// 
+    /// This occurs when:
+    /// - The memory region is not in the correct state for heap operations
+    /// - The memory region is not properly mapped
+    /// - The memory region has incorrect permissions
+    #[error("Invalid memory state")]
+    InvalidCurrentMemory,
+
+    /// Memory permissions are invalid.
+    /// 
+    /// This occurs when:
+    /// - The requested permissions are not allowed for heap memory
+    /// - The permissions would conflict with existing memory attributes
+    #[error("Invalid memory permission")]
+    InvalidNewMemoryPermission,
+
+    /// Memory region is invalid.
+    /// 
+    /// This occurs when:
+    /// - The requested size exceeds the maximum heap size
+    /// - The requested size exceeds the available heap region
+    /// - The operation would exceed the process's memory limit
+    #[error("Invalid memory region")]
+    InvalidMemoryRegion,
+
+    /// Operation is invalid for current state.
+    /// 
+    /// This occurs when:
+    /// - The heap is in an invalid state for the requested operation
+    /// - The operation cannot be performed in the current context
+    #[error("Invalid state")]
+    InvalidState,
+
+    /// Resource limit reached.
+    /// 
+    /// This occurs when:
+    /// - The process has reached its resource limit
+    /// - The system cannot allocate more resources
+    #[error("Resource limit reached")]
+    LimitReached,
+
+    /// An unknown error occurred
+    #[error("Unknown error: {0}")]
+    Unknown(Error),
+}
+
+impl ToRawResultCode for SetHeapSizeError {
+    fn to_rc(self) -> ResultCode {
+        match self {
+            SetHeapSizeError::InvalidSize => KError::InvalidSize.to_rc(),
+            SetHeapSizeError::OutOfResource => KError::OutOfResource.to_rc(),
+            SetHeapSizeError::OutOfMemory => KError::OutOfMemory.to_rc(),
+            SetHeapSizeError::InvalidCurrentMemory => KError::InvalidCurrentMemory.to_rc(),
+            SetHeapSizeError::InvalidNewMemoryPermission => KError::InvalidNewMemoryPermission.to_rc(),
+            SetHeapSizeError::InvalidMemoryRegion => KError::InvalidMemoryRegion.to_rc(),
+            SetHeapSizeError::InvalidState => KError::InvalidState.to_rc(),
+            SetHeapSizeError::LimitReached => KError::LimitReached.to_rc(),
+            SetHeapSizeError::Unknown(err) => err.to_raw(),
+        }
+    }
+}
 
 /// Queries information about a memory address.
 ///
@@ -24,17 +139,62 @@ pub type PageInfo = u32;
 /// * `addr` - The address to query
 ///
 /// Returns `Ok((MemoryInfo, PageInfo))` containing the memory information and page info if successful,
-/// or a [`MemoryError`] on failure.
-pub fn query_memory(addr: usize) -> Result<(MemoryInfo, PageInfo), MemoryError> {
+/// or a [`QueryMemoryError`] on failure.
+pub fn query_memory(addr: usize) -> Result<(MemoryInfo, PageInfo), QueryMemoryError> {
     let mut mem_info = Default::default();
     let mut page_info = Default::default();
 
     let rc = unsafe { raw::__nx_svc_query_memory(&mut mem_info, &mut page_info, addr) };
     RawResult::from_raw(rc).map((mem_info.into(), page_info), |rc| match rc.description() {
-        desc if KError::InvalidHandle == desc => MemoryError::InvalidHandle,
-        desc if KError::InvalidAddress == desc => MemoryError::InvalidAddress,
-        _ => MemoryError::Unknown(rc.into()),
+        desc if KError::InvalidHandle == desc => QueryMemoryError::InvalidHandle,
+        desc if KError::InvalidAddress == desc => QueryMemoryError::InvalidAddress,
+        desc if KError::InvalidCurrentMemory == desc => QueryMemoryError::InvalidCurrentMemory,
+        _ => QueryMemoryError::Unknown(rc.into()),
     })
+}
+
+/// Error type for query_memory operations.
+#[derive(Debug, thiserror::Error)]
+pub enum QueryMemoryError {
+    /// The process handle is invalid or not found.
+    /// 
+    /// This occurs when trying to query memory from a process that doesn't exist
+    /// or when the handle table lookup fails.
+    #[error("Invalid handle")]
+    InvalidHandle,
+
+    /// The address is invalid or not properly aligned.
+    /// 
+    /// This occurs when:
+    /// - The address is not aligned to 4KB
+    /// - The address is outside the process's address space
+    /// - The address would cause an overflow when used in calculations
+    #[error("Invalid address")]
+    InvalidAddress,
+    
+    /// The memory state is invalid for the operation.
+    /// 
+    /// This occurs when:
+    /// - The memory region is not in a valid state for querying
+    /// - The memory region is not mapped
+    /// - The memory region is not accessible to the current process
+    #[error("Invalid memory state")]
+    InvalidCurrentMemory,
+    
+    /// An unknown error occurred
+    #[error("Unknown error: {0}")]
+    Unknown(Error),
+}
+
+impl ToRawResultCode for QueryMemoryError {
+    fn to_rc(self) -> ResultCode {
+        match self {
+            Self::InvalidHandle => KError::InvalidHandle.to_rc(),
+            Self::InvalidAddress => KError::InvalidAddress.to_rc(),
+            Self::InvalidCurrentMemory => KError::InvalidCurrentMemory.to_rc(),
+            Self::Unknown(err) => err.to_raw(),
+        }
+    }
 }
 
 /// Unmaps a memory range.
@@ -48,48 +208,70 @@ pub fn query_memory(addr: usize) -> Result<(MemoryInfo, PageInfo), MemoryError> 
 /// * `src_addr` - The source address
 /// * `size` - The size of the memory range to unmap
 ///
-/// Returns `Ok(())` if the memory was successfully unmapped, or a [`MemoryError`] on failure.
+/// Returns `Ok(())` if the memory was successfully unmapped, or a [`UnmapMemoryError`] on failure.
 pub fn unmap_memory(
     dst_addr: *mut c_void,
     src_addr: *mut c_void,
     size: usize,
-) -> Result<(), MemoryError> {
+) -> Result<(), UnmapMemoryError> {
     let rc = unsafe { raw::__nx_svc_unmap_memory(dst_addr, src_addr, size) };
     RawResult::from_raw(rc).map((), |rc| match rc.description() {
-        desc if KError::InvalidHandle == desc => MemoryError::InvalidHandle,
-        desc if KError::InvalidAddress == desc => MemoryError::InvalidAddress,
-        _ => MemoryError::Unknown(rc.into()),
+        desc if KError::InvalidHandle == desc => UnmapMemoryError::InvalidHandle,
+        desc if KError::InvalidAddress == desc => UnmapMemoryError::InvalidAddress,
+        desc if KError::InvalidCurrentMemory == desc => UnmapMemoryError::InvalidCurrentMemory,
+        desc if KError::InvalidMemoryRegion == desc => UnmapMemoryError::InvalidMemoryRegion,
+        _ => UnmapMemoryError::Unknown(rc.into()),
     })
 }
 
-/// Error type for memory operations.
+/// Error type for unmap_memory operations.
 #[derive(Debug, thiserror::Error)]
-pub enum MemoryError {
-    /// The handle is invalid.
+pub enum UnmapMemoryError {
+    /// The process handle is invalid or not found.
+    /// 
+    /// This occurs when trying to unmap memory from a process that doesn't exist
+    /// or when the handle table lookup fails.
     #[error("Invalid handle")]
     InvalidHandle,
-    /// The memory address is invalid.
+
+    /// The memory address is invalid or not properly aligned.
+    /// 
+    /// This occurs when either the source or destination address is not aligned to 4KB,
+    /// or when the address range would cause an overflow.
     #[error("Invalid address")]
     InvalidAddress,
-    /// The memory state is invalid.
+    
+    /// The memory state is invalid for the operation.
+    /// 
+    /// This occurs when:
+    /// - The source address range is not within the process's address space
+    /// - The address range would cause an overflow (address + size <= address)
+    /// - The memory region is not in a valid state for unmapping
     #[error("Invalid memory state")]
-    InvalidMemState,
-    /// The memory range is invalid.
+    InvalidCurrentMemory,
+    
+    /// The memory range is invalid for the operation.
+    /// 
+    /// This occurs when:
+    /// - The destination is outside the stack region
+    /// - The destination is inside the heap region
+    /// - The destination is inside the alias region
     #[error("Invalid memory range")]
-    InvalidMemRange,
-    /// An unknown error occurred.
+    InvalidMemoryRegion,
+    
+    /// An unknown error occurred
     #[error("Unknown error: {0}")]
     Unknown(Error),
 }
 
-impl ToRawResultCode for MemoryError {
+impl ToRawResultCode for UnmapMemoryError {
     fn to_rc(self) -> ResultCode {
         match self {
-            MemoryError::InvalidHandle => KError::InvalidHandle.to_rc(),
-            MemoryError::InvalidAddress => KError::InvalidAddress.to_rc(),
-            MemoryError::InvalidMemState => KError::InvalidAddress.to_rc(),
-            MemoryError::InvalidMemRange => KError::InvalidAddress.to_rc(),
-            MemoryError::Unknown(err) => err.to_raw(),
+            UnmapMemoryError::InvalidHandle => KError::InvalidHandle.to_rc(),
+            UnmapMemoryError::InvalidAddress => KError::InvalidAddress.to_rc(),
+            UnmapMemoryError::InvalidCurrentMemory => KError::InvalidCurrentMemory.to_rc(),
+            UnmapMemoryError::InvalidMemoryRegion => KError::InvalidMemoryRegion.to_rc(),
+            UnmapMemoryError::Unknown(err) => err.to_raw(),
         }
     }
 }
