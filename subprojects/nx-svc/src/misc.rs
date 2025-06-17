@@ -7,36 +7,25 @@
 //! The main functionality is centered around the [`get_info`] system call, which provides
 //! a type-safe way to query various system properties and kernel object information.
 
-pub use super::raw::{Handle, INVALID_HANDLE};
+pub use super::raw::{CUR_PROCESS_HANDLE, Handle, INVALID_HANDLE};
 use super::{
     error::{KernelError, Module, ResultCode, ToRawResultCode},
     raw,
     result::{Error, Result, raw::Result as RawResult},
 };
 
-/// Retrieves random entropy for the current process or specified handle.
+/// Retrieves random entropy.
 ///
 /// This is a convenience wrapper around [`get_info`] for the [`RandomEntropy`] info type.
 ///
 /// # Arguments
 ///
 /// * `source` - The entropy source sub-ID (usually 0 for the default source)
-/// * `handle` - The handle to query, or [`INVALID_HANDLE`] for the current process
-///
-/// # Returns
 ///
 /// Returns the random entropy value on success, or a [`GetInfoError`] on failure.
+// TODO: Review the actual error codes this fn returns
 pub fn get_random_entropy(source: u64) -> Result<u64, GetInfoError> {
-    let mut out = 0u64;
-    // Safety: out is a valid pointer, handle is user-supplied
-    unsafe {
-        get_info(
-            &mut out as *mut u64,
-            InfoType::RandomEntropy { source },
-            INVALID_HANDLE,
-        )?;
-    }
-    Ok(out)
+    Ok(unsafe { get_info(InfoType::RandomEntropy { source }, INVALID_HANDLE)? })
 }
 
 /// Retrieves memory region information for the current process.
@@ -48,18 +37,12 @@ pub fn get_random_entropy(source: u64) -> Result<u64, GetInfoError> {
 ///
 /// * `region_type` - The type of memory region to query (e.g. Alias, Heap, ASLR, Stack)
 ///
-/// # Returns
-///
 /// Returns the base address and size of the requested memory region on success,
 /// or a [`GetInfoError`] on failure.
+// TODO: Review the actual error codes this fn returns
 pub fn get_memory_region_info(region_type: InfoType) -> Result<(u64, u64), GetInfoError> {
-    let mut base = 0u64;
-    let mut size = 0u64;
-
     // Get the base address
-    unsafe {
-        get_info(&mut base as *mut u64, region_type, INVALID_HANDLE)?;
-    }
+    let base = unsafe { get_info(region_type, raw::INVALID_HANDLE) }?;
 
     // Get the size using the corresponding size info type
     let size_type = match region_type {
@@ -70,11 +53,34 @@ pub fn get_memory_region_info(region_type: InfoType) -> Result<(u64, u64), GetIn
         _ => return Err(GetInfoError::InvalidInfoType),
     };
 
-    unsafe {
-        get_info(&mut size as *mut u64, size_type, INVALID_HANDLE)?;
-    }
+    let size = unsafe { get_info(size_type, raw::INVALID_HANDLE) }?;
 
     Ok((base, size))
+}
+
+/// Retrieves the total amount of memory available for the current process.
+///
+/// This function provides a safe wrapper around the `svcGetInfo` system call, allowing
+/// retrieval of the total amount of memory available for the current process.
+///
+/// Returns the total amount of memory available for the current process on success,
+/// or a [`GetInfoError`] on failure.
+// TODO: Review the actual error codes this fn returns
+pub fn get_total_memory_size() -> Result<usize, GetInfoError> {
+    unsafe { get_info(InfoType::TotalMemorySize, raw::CUR_PROCESS_HANDLE) }
+        .map(|size| size as usize)
+}
+
+/// Retrieves the amount of memory currently used by the current process.
+///
+/// This function provides a safe wrapper around the `svcGetInfo` system call, allowing
+/// retrieval of the amount of memory currently used by the current process.
+///
+/// Returns the amount of memory currently used by the current process on success,
+/// or a [`GetInfoError`] on failure.
+// TODO: Review the actual error codes this fn returns
+pub fn get_used_memory_size() -> Result<usize, GetInfoError> {
+    unsafe { get_info(InfoType::UsedMemorySize, raw::CUR_PROCESS_HANDLE) }.map(|size| size as usize)
 }
 
 /// Retrieves information about the system or a kernel object.
@@ -99,11 +105,12 @@ pub fn get_memory_region_info(region_type: InfoType) -> Result<(u64, u64), GetIn
 /// * It dereferences the raw pointer `out`
 /// * The caller must ensure the pointer is valid and points to writable memory
 /// * The caller must ensure the handle is valid if one is provided
-pub unsafe fn get_info(out: *mut u64, id0: InfoType, handle: Handle) -> Result<(), GetInfoError> {
-    let (id0, id1) = id0.to_ids();
+pub unsafe fn get_info(info_type: InfoType, handle: Handle) -> Result<u64, GetInfoError> {
+    let (id0, id1) = info_type.to_ids();
+    let mut out = 0u64;
 
-    let rc = unsafe { raw::__nx_svc_get_info(out, id0, handle, id1) };
-    RawResult::from_raw(rc).map((), |rc| {
+    let rc = unsafe { raw::__nx_svc_get_info(&mut out, id0, handle, id1) };
+    RawResult::from_raw(rc).map(out, |rc| {
         let desc = rc.description();
 
         // Map kernel error codes to the appropriate error enum variant

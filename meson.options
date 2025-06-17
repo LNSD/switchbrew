@@ -14,9 +14,23 @@ option(
 )
 
 option(
+    'use_nx_alloc',
+    type : 'feature', value : 'disabled',
+    description : 'Use nx-alloc instead of libnx implementation',
+    yield : true
+)
+
+option(
     'use_nx_cpu',
     type : 'feature', value : 'disabled',
     description : 'Use nx-cpu instead of libnx implementation',
+    yield : true
+)
+
+option(
+    'use_nx_rand',
+    type : 'feature', value : 'disabled',
+    description : 'Use nx-rand instead of libnx implementation',
     yield : true
 )
 
@@ -52,12 +66,5 @@ option(
     'use_nx_time',
     type : 'feature', value : 'disabled',
     description : 'Use nx-time instead of libnx implementation',
-    yield : true
-)
-
-option(
-    'use_nx_rand',
-    type : 'feature', value : 'disabled',
-    description : 'Use nx-rand instead of libnx implementation',
     yield : true
 )

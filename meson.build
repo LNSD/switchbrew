@@ -10,6 +10,9 @@ else
     subproject('libnx-dkp')
 endif
 
+if get_option('use_nx_alloc').disabled()
+    subproject('nx-alloc')
+endif
 if get_option('use_nx_cpu').disabled()
     subproject('nx-cpu')
 endif
@@ -27,6 +30,9 @@ if get_option('use_nx_sync').disabled()
 endif
 if get_option('use_nx_time').disabled()
     subproject('nx-time')
+endif
+if get_option('use_nx_alloc').disabled()
+    subproject('nx-alloc')
 endif
 
 # Executables

@@ -42,7 +42,7 @@ pub fn set_heap_size(size: usize) -> Result<*mut c_void, SetHeapSizeError> {
 #[derive(Debug, thiserror::Error)]
 pub enum SetHeapSizeError {
     /// The size parameter is invalid.
-    /// 
+    ///
     /// This occurs when:
     /// - The size is not aligned to 4KB
     /// - The size is 0
@@ -51,7 +51,7 @@ pub enum SetHeapSizeError {
     InvalidSize,
 
     /// System resources are exhausted.
-    /// 
+    ///
     /// This occurs when:
     /// - The system has no more physical memory available
     /// - The system has no more virtual memory available
@@ -59,7 +59,7 @@ pub enum SetHeapSizeError {
     OutOfResource,
 
     /// Not enough memory available.
-    /// 
+    ///
     /// This occurs when:
     /// - The process has reached its memory limit
     /// - The system cannot allocate the requested amount of memory
@@ -67,7 +67,7 @@ pub enum SetHeapSizeError {
     OutOfMemory,
 
     /// Current memory state is invalid.
-    /// 
+    ///
     /// This occurs when:
     /// - The memory region is not in the correct state for heap operations
     /// - The memory region is not properly mapped
@@ -76,7 +76,7 @@ pub enum SetHeapSizeError {
     InvalidCurrentMemory,
 
     /// Memory permissions are invalid.
-    /// 
+    ///
     /// This occurs when:
     /// - The requested permissions are not allowed for heap memory
     /// - The permissions would conflict with existing memory attributes
@@ -84,7 +84,7 @@ pub enum SetHeapSizeError {
     InvalidNewMemoryPermission,
 
     /// Memory region is invalid.
-    /// 
+    ///
     /// This occurs when:
     /// - The requested size exceeds the maximum heap size
     /// - The requested size exceeds the available heap region
@@ -93,7 +93,7 @@ pub enum SetHeapSizeError {
     InvalidMemoryRegion,
 
     /// Operation is invalid for current state.
-    /// 
+    ///
     /// This occurs when:
     /// - The heap is in an invalid state for the requested operation
     /// - The operation cannot be performed in the current context
@@ -101,7 +101,7 @@ pub enum SetHeapSizeError {
     InvalidState,
 
     /// Resource limit reached.
-    /// 
+    ///
     /// This occurs when:
     /// - The process has reached its resource limit
     /// - The system cannot allocate more resources
@@ -120,7 +120,9 @@ impl ToRawResultCode for SetHeapSizeError {
             SetHeapSizeError::OutOfResource => KError::OutOfResource.to_rc(),
             SetHeapSizeError::OutOfMemory => KError::OutOfMemory.to_rc(),
             SetHeapSizeError::InvalidCurrentMemory => KError::InvalidCurrentMemory.to_rc(),
-            SetHeapSizeError::InvalidNewMemoryPermission => KError::InvalidNewMemoryPermission.to_rc(),
+            SetHeapSizeError::InvalidNewMemoryPermission => {
+                KError::InvalidNewMemoryPermission.to_rc()
+            }
             SetHeapSizeError::InvalidMemoryRegion => KError::InvalidMemoryRegion.to_rc(),
             SetHeapSizeError::InvalidState => KError::InvalidState.to_rc(),
             SetHeapSizeError::LimitReached => KError::LimitReached.to_rc(),
@@ -157,30 +159,30 @@ pub fn query_memory(addr: usize) -> Result<(MemoryInfo, PageInfo), QueryMemoryEr
 #[derive(Debug, thiserror::Error)]
 pub enum QueryMemoryError {
     /// The process handle is invalid or not found.
-    /// 
+    ///
     /// This occurs when trying to query memory from a process that doesn't exist
     /// or when the handle table lookup fails.
     #[error("Invalid handle")]
     InvalidHandle,
 
     /// The address is invalid or not properly aligned.
-    /// 
+    ///
     /// This occurs when:
     /// - The address is not aligned to 4KB
     /// - The address is outside the process's address space
     /// - The address would cause an overflow when used in calculations
     #[error("Invalid address")]
     InvalidAddress,
-    
+
     /// The memory state is invalid for the operation.
-    /// 
+    ///
     /// This occurs when:
     /// - The memory region is not in a valid state for querying
     /// - The memory region is not mapped
     /// - The memory region is not accessible to the current process
     #[error("Invalid memory state")]
     InvalidCurrentMemory,
-    
+
     /// An unknown error occurred
     #[error("Unknown error: {0}")]
     Unknown(Error),
@@ -228,37 +230,37 @@ pub fn unmap_memory(
 #[derive(Debug, thiserror::Error)]
 pub enum UnmapMemoryError {
     /// The process handle is invalid or not found.
-    /// 
+    ///
     /// This occurs when trying to unmap memory from a process that doesn't exist
     /// or when the handle table lookup fails.
     #[error("Invalid handle")]
     InvalidHandle,
 
     /// The memory address is invalid or not properly aligned.
-    /// 
+    ///
     /// This occurs when either the source or destination address is not aligned to 4KB,
     /// or when the address range would cause an overflow.
     #[error("Invalid address")]
     InvalidAddress,
-    
+
     /// The memory state is invalid for the operation.
-    /// 
+    ///
     /// This occurs when:
     /// - The source address range is not within the process's address space
     /// - The address range would cause an overflow (address + size <= address)
     /// - The memory region is not in a valid state for unmapping
     #[error("Invalid memory state")]
     InvalidCurrentMemory,
-    
+
     /// The memory range is invalid for the operation.
-    /// 
+    ///
     /// This occurs when:
     /// - The destination is outside the stack region
     /// - The destination is inside the heap region
     /// - The destination is inside the alias region
     #[error("Invalid memory range")]
     InvalidMemoryRegion,
-    
+
     /// An unknown error occurred
     #[error("Unknown error: {0}")]
     Unknown(Error),

@@ -4,6 +4,21 @@ option(
     type : 'string', value : '/opt/devkitpro',
     description : 'Path to devkitPro directory'
 ) 
+
+option(
+    'use_nx_alloc',
+    type : 'feature', value : 'disabled',
+    description : 'Use nx-alloc instead of libnx implementation',
+    yield : true
+)
+
+option(
+    'use_nx_rand',
+    type : 'feature', value : 'disabled',
+    description : 'Use nx-rand instead of libnx implementation',
+    yield : true
+)
+
 option(
     'use_nx_svc',
     type : 'feature', value : 'disabled',
@@ -36,12 +51,5 @@ option(
     'use_nx_time',
     type : 'feature', value : 'disabled',
     description : 'Use nx-time instead of libnx implementation',
-    yield : true
-)
-
-option(
-    'use_nx_rand',
-    type : 'feature', value : 'disabled',
-    description : 'Use nx-rand instead of libnx implementation',
     yield : true
 )
