@@ -15,9 +15,9 @@ alias fmt := format
 check-format:
     cargo +nightly fmt --all -- --check
 
-# Check Rust code (cargo check)
+# Check Rust code (cargo check --all-features)
 check *EXTRA_FLAGS:
-    cargo check {{EXTRA_FLAGS}}
+    cargo check --all-features {{EXTRA_FLAGS}}
 
 # Setup meson build directory (meson setup)
 meson-setup *EXTRA_FLAGS:
@@ -29,6 +29,7 @@ alias setup := meson-setup
 meson-compile *TARGETS:
     meson compile -C {{build_dir}} {{TARGETS}}
 
+alias compile := meson-compile
 alias build := meson-compile
 
 # Clean the build directory

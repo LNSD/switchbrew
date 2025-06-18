@@ -10,6 +10,10 @@ test = false
 doctest = false
 bench = false
 
+[features]
+# Enable the __nx_sync FFI
+ffi = []
+
 [dependencies]
 nx-svc = { version = "0.1.0", path = "../nx-svc" }
 nx-thread-tls = { version = "0.1.0", path = "../nx-thread-tls" }

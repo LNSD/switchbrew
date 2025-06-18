@@ -1,9 +1,10 @@
 //! Temporal quantification.
-
 #![no_std]
 
-pub mod common;
+#[cfg(feature = "ffi")]
 mod ffi;
+
+pub mod common;
 mod sys;
 
 pub use core::time::{Duration, TryFromFloatSecsError};

@@ -10,34 +10,6 @@ else
     subproject('libnx-dkp')
 endif
 
-if get_option('use_nx_alloc').disabled()
-    subproject('nx-alloc')
-endif
-if get_option('use_nx_cpu').disabled()
-    subproject('nx-cpu')
-endif
-if get_option('use_nx_svc').disabled()
-    subproject('nx-svc')
-endif
-if get_option('use_nx_thread').disabled()
-    subproject('nx-thread')
-endif
-if get_option('use_nx_thread_tls').disabled()
-    subproject('nx-thread-tls')
-endif
-if get_option('use_nx_sync').disabled()
-    subproject('nx-sync')
-endif
-if get_option('use_nx_time').disabled()
-    subproject('nx-time')
-endif
-if get_option('use_nx_alloc').disabled()
-    subproject('nx-alloc')
-endif
-if get_option('use_nx_std_sync').disabled()
-    subproject('nx-std-sync')
-endif
-
 # Executables
 subproject('tests')
 subproject('examples')

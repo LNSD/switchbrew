@@ -10,6 +10,10 @@ test = false
 doctest = false
 bench = false
 
+[features]
+# Enable the __nx_rand FFI
+ffi = []
+
 [dependencies]
 nx-svc = { version = "0.1.0", path = "../nx-svc" }
 rand = { version = "0.8", default-features = false }

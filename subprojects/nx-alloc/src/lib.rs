@@ -1,7 +1,9 @@
 //! # nx-alloc
 #![no_std]
 
+#[cfg(feature = "ffi")]
 mod ffi;
+
 mod global;
 pub mod llalloc;
 mod sync;

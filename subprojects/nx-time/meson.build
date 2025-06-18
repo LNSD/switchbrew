@@ -30,6 +30,7 @@ nx_time_tgt = custom_target(
         '--profile', get_option('buildtype') == 'release' ? 'release' : 'dev',
         '--target-dir', meson.global_build_root() / 'cargo-target',
         '--artifact-dir', '@OUTDIR@',
+        '--features', 'ffi',
     ],
     output : ['libnx_time.a', 'libnx_time.rlib'],
     console: true,
