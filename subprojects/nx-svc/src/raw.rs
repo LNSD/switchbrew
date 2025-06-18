@@ -225,7 +225,7 @@ bitflags! {
         const TRANSFER_MEM_ALLOWED = 1 << 17;
         /// Query physical address allowed
         const QUERY_PADDR_ALLOWED = 1 << 18;
-        /// Map device allowed ([`__nx_svc_map_device_address_space`] and [`__nx_svc_map_device_address_space_by_force`])
+        /// Map device allowed ([`map_device_address_space`] and [`map_device_address_space_by_force`])
         const MAP_DEVICE_ALLOWED = 1 << 19;
         /// Map device aligned allowed
         const MAP_DEVICE_ALIGNED_ALLOWED = 1 << 20;
@@ -249,35 +249,35 @@ bitflags! {
 pub enum MemoryType {
     /// Unmapped memory
     Unmapped = 0x00,
-    /// Mapped by kernel capability parsing in [`__nx_svc_create_process`]
+    /// Mapped by kernel capability parsing in [`create_process`]
     Io = 0x01,
-    /// Mapped by kernel capability parsing in [`__nx_svc_create_process`]
+    /// Mapped by kernel capability parsing in [`create_process`]
     Normal = 0x02,
-    /// Mapped during [`__nx_svc_create_process`]
+    /// Mapped during [`create_process`]
     CodeStatic = 0x03,
-    /// Transition from CodeStatic performed by [`__nx_svc_set_process_memory_permission`]
+    /// Transition from CodeStatic performed by [`set_process_memory_permission`]
     CodeMutable = 0x04,
-    /// Mapped using [`__nx_svc_set_heap_size`]
+    /// Mapped using [`set_heap_size`]
     Heap = 0x05,
-    /// Mapped using [`__nx_svc_map_shared_memory`]
+    /// Mapped using [`map_shared_memory`]
     SharedMem = 0x06,
-    /// Mapped using [`__nx_svc_map_memory`]
+    /// Mapped using [`map_memory`]
     WeirdMappedMem = 0x07,
-    /// Mapped using [`__nx_svc_map_process_code_memory`]
+    /// Mapped using [`map_process_code_memory`]
     ModuleCodeStatic = 0x08,
-    /// Transition from ModuleCodeStatic performed by [`__nx_svc_set_process_memory_permission`]
+    /// Transition from ModuleCodeStatic performed by [`set_process_memory_permission`]
     ModuleCodeMutable = 0x09,
     /// IPC buffers with descriptor `flags=0`
     IpcBuffer0 = 0x0A,
-    /// Mapped using [`__nx_svc_map_memory`]
+    /// Mapped using [`map_memory`]
     MappedMemory = 0x0B,
-    /// Mapped during [`__nx_svc_create_thread`]
+    /// Mapped during [`create_thread`]
     ThreadLocal = 0x0C,
-    /// Mapped using [`__nx_svc_map_transfer_memory`] when the owning process has `perm=0`
+    /// Mapped using [`map_transfer_memory`] when the owning process has `perm=0`
     TransferMemIsolated = 0x0D,
-    /// Mapped using [`__nx_svc_map_transfer_memory`] when the owning process has `perm!=0`
+    /// Mapped using [`map_transfer_memory`] when the owning process has `perm!=0`
     TransferMem = 0x0E,
-    /// Mapped using [`__nx_svc_map_process_memory`]
+    /// Mapped using [`map_process_memory`]
     ProcessMem = 0x0F,
     /// Reserved
     Reserved = 0x10,
@@ -285,15 +285,15 @@ pub enum MemoryType {
     IpcBuffer1 = 0x11,
     /// IPC buffers with descriptor `flags=3`
     IpcBuffer3 = 0x12,
-    /// Mapped in kernel during [`__nx_svc_create_thread`]
+    /// Mapped in kernel during [`create_thread`]
     KernelStack = 0x13,
-    /// Mapped in kernel during [`__nx_svc_control_code_memory`]
+    /// Mapped in kernel during [`control_code_memory`]
     CodeReadOnly = 0x14,
-    /// Mapped in kernel during [`__nx_svc_control_code_memory`]
+    /// Mapped in kernel during [`control_code_memory`]
     CodeWritable = 0x15,
     /// Not available
     Coverage = 0x16,
-    /// Mapped in kernel during [`__nx_svc_map_insecure_physical_memory`]
+    /// Mapped in kernel during [`map_insecure_physical_memory`]
     Insecure = 0x17,
 }
 
@@ -440,11 +440,7 @@ pub struct SecmonArgs {
 /// | IN | _size_ | Size of the heap, must be a multiple of 0x200000 and [2.0.0+] less than 0x18000000. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetHeapSize>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_set_heap_size(
-    out_addr: *mut *mut c_void,
-    size: usize,
-) -> ResultCode {
+pub unsafe fn set_heap_size(out_addr: *mut *mut c_void, size: usize) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -474,8 +470,7 @@ pub unsafe extern "C" fn __nx_svc_set_heap_size(
 /// | IN | _perm_ | Permissions (see [MemoryPermission]). |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetMemoryPermission>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_set_memory_permission(
+pub unsafe fn set_memory_permission(
     addr: *mut c_void,
     size: usize,
     perm: u32, // TODO: MemoryPermission bitfield
@@ -508,8 +503,7 @@ pub unsafe extern "C" fn __nx_svc_set_memory_permission(
 /// | IN | _attr_ | New attributes. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetMemoryAttribute>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_set_memory_attribute(
+pub unsafe fn set_memory_attribute(
     addr: *mut c_void,
     size: usize,
     mask: u32,
@@ -546,12 +540,7 @@ pub unsafe extern "C" fn __nx_svc_set_memory_attribute(
 /// | IN | _size_ | Size of the range. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_map_memory(
-    dst_addr: *mut c_void,
-    src_addr: *mut c_void,
-    size: usize,
-) -> ResultCode {
+pub unsafe fn map_memory(dst_addr: *mut c_void, src_addr: *mut c_void, size: usize) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -566,7 +555,7 @@ pub unsafe extern "C" fn __nx_svc_map_memory(
     result
 }
 
-/// Unmaps a region that was previously mapped with [`__nx_svc_map_memory`].
+/// Unmaps a region that was previously mapped with [`map_memory`].
 ///
 /// `Result svcUnmapMemory(void* dst_addr, void* src_addr, uint64_t size);`
 ///
@@ -579,8 +568,7 @@ pub unsafe extern "C" fn __nx_svc_map_memory(
 /// | IN | _size_ | Size of the range. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_unmap_memory(
+pub unsafe fn unmap_memory(
     dst_addr: *mut c_void,
     src_addr: *mut c_void,
     size: usize,
@@ -613,8 +601,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_memory(
 /// | IN  | _addr_ | Address to query.
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#QueryMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_query_memory(
+pub unsafe fn query_memory(
     meminfo: *mut MemoryInfo,
     pageinfo: *mut u32,
     addr: usize,
@@ -647,8 +634,7 @@ pub unsafe extern "C" fn __nx_svc_query_memory(
 /// Syscall code: [EXIT_PROCESS](crate::code::EXIT_PROCESS) (`0x7`).
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ExitProcess>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_exit_process() -> ! {
+pub unsafe fn exit_process() -> ! {
     unsafe {
         asm!(
             "svc 0x7",         // Issue the SVC call with immediate value 0x7
@@ -673,8 +659,7 @@ pub unsafe extern "C" fn __nx_svc_exit_process() -> ! {
 /// | IN | _cpuid_ | CPU core ID. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateThread>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_create_thread(
+pub unsafe fn create_thread(
     handle: *mut Handle,
     entry: *mut c_void,
     arg: *mut c_void,
@@ -713,8 +698,7 @@ pub unsafe extern "C" fn __nx_svc_create_thread(
 /// | IN | _handle_ | Handle of the thread to start. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#StartThread>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_start_thread(handle: Handle) -> ResultCode {
+pub unsafe fn start_thread(handle: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -734,8 +718,7 @@ pub unsafe extern "C" fn __nx_svc_start_thread(handle: Handle) -> ResultCode {
 /// Syscall code: [EXIT_THREAD](crate::code::EXIT_THREAD) (`0xA`).
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ExitThread>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_exit_thread() -> ! {
+pub unsafe fn exit_thread() -> ! {
     unsafe {
         asm!(
             "svc 0xA",         // Issue the SVC call with immediate value 0xA
@@ -757,8 +740,7 @@ pub unsafe extern "C" fn __nx_svc_exit_thread() -> ! {
 /// | IN | _nano_ | Number of nanoseconds to sleep, or [YieldType] for yield. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SleepThread>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_sleep_thread(nano: i64) {
+pub unsafe fn sleep_thread(nano: i64) {
     unsafe {
         asm!(
             "svc 0xB",     // Issue the SVC call with immediate value 0xB
@@ -780,11 +762,7 @@ pub unsafe extern "C" fn __nx_svc_sleep_thread(nano: i64) {
 /// | IN | _handle_ | Handle of the thread to query. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetThreadPriority>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_thread_priority(
-    priority: *mut i32,
-    handle: Handle,
-) -> ResultCode {
+pub unsafe fn get_thread_priority(priority: *mut i32, handle: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -815,8 +793,7 @@ pub unsafe extern "C" fn __nx_svc_get_thread_priority(
 /// | IN | _priority_ | New priority. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetThreadPriority>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_set_thread_priority(handle: Handle, priority: u32) -> ResultCode {
+pub unsafe fn set_thread_priority(handle: Handle, priority: u32) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -843,8 +820,7 @@ pub unsafe extern "C" fn __nx_svc_set_thread_priority(handle: Handle, priority: 
 /// | IN | _handle_ | Handle of the thread to query. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetThreadCoreMask>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_thread_core_mask(
+pub unsafe fn get_thread_core_mask(
     core_id: *mut i32,
     affinity_mask: *mut u64,
     handle: Handle,
@@ -880,12 +856,7 @@ pub unsafe extern "C" fn __nx_svc_get_thread_core_mask(
 /// | IN | _affinity_mask_ | New affinity mask. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetThreadCoreMask>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_set_thread_core_mask(
-    handle: Handle,
-    core_id: i32,
-    affinity_mask: u32,
-) -> ResultCode {
+pub unsafe fn set_thread_core_mask(handle: Handle, core_id: i32, affinity_mask: u32) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -909,8 +880,7 @@ pub unsafe extern "C" fn __nx_svc_set_thread_core_mask(
 /// Syscall code: [GET_CURRENT_PROCESSOR_NUMBER](crate::code::GET_CURRENT_PROCESSOR_NUMBER) (`0x10`).
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetCurrentProcessorNumber>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_current_processor_number() -> ResultCode {
+pub unsafe fn get_current_processor_number() -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -930,7 +900,7 @@ pub unsafe extern "C" fn __nx_svc_get_current_processor_number() -> ResultCode {
 ///
 /// Will wake up any thread currently waiting on this event. Can potentially trigger a re-schedule.
 ///
-/// Any calls to [__nx_svc_wait_synchronization] on this handle will return immediately, until the
+/// Any calls to [wait_synchronization] on this handle will return immediately, until the
 /// event's signaled state is reset.
 ///
 /// `Result svcSignalEvent(Handle handle);`
@@ -942,8 +912,7 @@ pub unsafe extern "C" fn __nx_svc_get_current_processor_number() -> ResultCode {
 /// | IN | _handle_ | Handle of the event to signal. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SignalEvent>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_signal_event(handle: Handle) -> ResultCode {
+pub unsafe fn signal_event(handle: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -967,8 +936,7 @@ pub unsafe extern "C" fn __nx_svc_signal_event(handle: Handle) -> ResultCode {
 /// | IN | _handle_ | Handle of the event to clear. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ClearEvent>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_clear_event(handle: Handle) -> ResultCode {
+pub unsafe fn clear_event(handle: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -999,8 +967,7 @@ pub unsafe extern "C" fn __nx_svc_clear_event(handle: Handle) -> ResultCode {
 /// | IN | _perm_ | Permissions (see [MemoryPermission]). |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapSharedMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_map_shared_memory(
+pub unsafe fn map_shared_memory(
     handle: Handle,
     addr: *mut c_void,
     size: usize,
@@ -1034,12 +1001,7 @@ pub unsafe extern "C" fn __nx_svc_map_shared_memory(
 /// | IN | _size_ | Size of the block. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapSharedMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_unmap_shared_memory(
-    handle: Handle,
-    addr: *mut c_void,
-    size: usize,
-) -> ResultCode {
+pub unsafe fn unmap_shared_memory(handle: Handle, addr: *mut c_void, size: usize) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1068,8 +1030,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_shared_memory(
 /// | IN | _perm_ | Permissions (see [MemoryPermission]). |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateTransferMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_create_transfer_memory(
+pub unsafe fn create_transfer_memory(
     handle: *mut Handle,
     addr: *mut c_void,
     size: usize,
@@ -1108,8 +1069,7 @@ pub unsafe extern "C" fn __nx_svc_create_transfer_memory(
 /// | IN | _handle_ | Handle to close. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CloseHandle>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_close_handle(handle: Handle) -> ResultCode {
+pub unsafe fn close_handle(handle: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1137,8 +1097,7 @@ pub unsafe extern "C" fn __nx_svc_close_handle(handle: Handle) -> ResultCode {
 /// | IN | _handle_ | Handle of the signal to reset. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ResetSignal>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_reset_signal(handle: Handle) -> ResultCode {
+pub unsafe fn reset_signal(handle: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1173,8 +1132,7 @@ pub unsafe extern "C" fn __nx_svc_reset_signal(handle: Handle) -> ResultCode {
 /// | IN | _timeout_ | Timeout in nanoseconds. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#WaitSynchronization>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_wait_synchronization(
+pub unsafe fn wait_synchronization(
     index: *mut i32,
     handles: *const u32,
     handle_count: i32,
@@ -1198,11 +1156,11 @@ pub unsafe extern "C" fn __nx_svc_wait_synchronization(
     result
 }
 
-/// Waits a [__nx_svc_wait_synchronization] operation being done on a synchronization object in
+/// Waits a [wait_synchronization] operation being done on a synchronization object in
 /// another thread.
 ///
-/// If the referenced thread is currently in a synchronization call ([__nx_svc_wait_synchronization],
-/// [__nx_svc_reply_and_receive] or [__nx_svc_reply_and_receive_light]), that call will be
+/// If the referenced thread is currently in a synchronization call ([wait_synchronization],
+/// [reply_and_receive] or [reply_and_receive_light]), that call will be
 /// interrupted and return `0xec01`. If that thread is not currently executing such a synchronization
 /// call, the next call to a synchronization call will return `0xec01`.
 ///
@@ -1215,8 +1173,7 @@ pub unsafe extern "C" fn __nx_svc_wait_synchronization(
 /// | IN | _handle_ | Handle to the thread to wait for. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CancelSynchronization>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_cancel_synchronization(handle: Handle) -> ResultCode {
+pub unsafe fn cancel_synchronization(handle: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1242,8 +1199,7 @@ pub unsafe extern "C" fn __nx_svc_cancel_synchronization(handle: Handle) -> Resu
 /// | IN | _curr_thread_handle_ | The current thread's kernel handle. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ArbitrateLock>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_arbitrate_lock(
+pub unsafe fn arbitrate_lock(
     owner_thread_handle: Handle,
     mutex: *mut u32,
     curr_thread_handle: Handle,
@@ -1273,8 +1229,7 @@ pub unsafe extern "C" fn __nx_svc_arbitrate_lock(
 /// | IN | _mutex_ | The mutex raw tag value. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ArbitrateUnlock>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_arbitrate_unlock(mutex: *mut u32) -> ResultCode {
+pub unsafe fn arbitrate_unlock(mutex: *mut u32) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1301,8 +1256,7 @@ pub unsafe extern "C" fn __nx_svc_arbitrate_unlock(mutex: *mut u32) -> ResultCod
 /// | IN | _timeout_ns_ | Timeout in nanoseconds. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#WaitProcessWideKeyAtomic>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_wait_process_wide_key_atomic(
+pub unsafe fn wait_process_wide_key_atomic(
     address: *mut u32,
     cv_key: *mut u32,
     tag: u32,
@@ -1335,8 +1289,7 @@ pub unsafe extern "C" fn __nx_svc_wait_process_wide_key_atomic(
 /// | IN | _count_ | Number of threads to wake up. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SignalProcessWideKey>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_signal_process_wide_key(cv_key: *mut u32, count: i32) {
+pub unsafe fn signal_process_wide_key(cv_key: *mut u32, count: i32) {
     unsafe {
         asm!(
             "svc 0x1D",      // Issue the SVC call with immediate value 0x1D
@@ -1358,8 +1311,7 @@ pub unsafe extern "C" fn __nx_svc_signal_process_wide_key(cv_key: *mut u32, coun
 /// Syscall code: [GET_SYSTEM_TICK](crate::code::GET_SYSTEM_TICK) (`0x1E`).
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetSystemTick>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_system_tick() -> u64 {
+pub unsafe fn get_system_tick() -> u64 {
     let result: u64;
     unsafe {
         asm!(
@@ -1387,11 +1339,7 @@ pub unsafe extern "C" fn __nx_svc_get_system_tick() -> u64 {
 /// | IN | _name_ | Pointer to the name of the port. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ConnectToNamedPort>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_connect_to_named_port(
-    session: *mut Handle,
-    name: *const c_char,
-) -> ResultCode {
+pub unsafe fn connect_to_named_port(session: *mut Handle, name: *const c_char) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1419,8 +1367,7 @@ pub unsafe extern "C" fn __nx_svc_connect_to_named_port(
 /// | IN | _session_ | Session handle. |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SendSyncRequestLight>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_send_sync_request_light(session: Handle) -> ResultCode {
+pub unsafe fn send_sync_request_light(session: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1444,8 +1391,7 @@ pub unsafe extern "C" fn __nx_svc_send_sync_request_light(session: Handle) -> Re
 /// | IN | _session_ | Session handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SendSyncRequest>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_send_sync_request(session: Handle) -> ResultCode {
+pub unsafe fn send_sync_request(session: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1471,8 +1417,7 @@ pub unsafe extern "C" fn __nx_svc_send_sync_request(session: Handle) -> ResultCo
 /// | IN | _session_ | Session handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SendSyncRequestWithUserBuffer>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_send_sync_request_with_user_buffer(
+pub unsafe fn send_sync_request_with_user_buffer(
     usr_buffer: *mut c_void,
     size: u64,
     session: Handle,
@@ -1506,8 +1451,7 @@ pub unsafe extern "C" fn __nx_svc_send_sync_request_with_user_buffer(
 /// | IN | _session_ | Session handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SendAsyncRequestWithUserBuffer>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_send_async_request_with_user_buffer(
+pub unsafe fn send_async_request_with_user_buffer(
     handle: *mut Handle,
     usr_buffer: *mut c_void,
     size: u64,
@@ -1547,11 +1491,7 @@ pub unsafe extern "C" fn __nx_svc_send_async_request_with_user_buffer(
 /// | IN | _handle_ | Handle of the process to get the PID from |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetProcessId>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_process_id(
-    process_id: *mut u64,
-    handle: Handle,
-) -> ResultCode {
+pub unsafe fn get_process_id(process_id: *mut u64, handle: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1580,8 +1520,7 @@ pub unsafe extern "C" fn __nx_svc_get_process_id(
 /// | IN | _handle_ | Handle of the thread to get the TID from |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetThreadId>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_thread_id(thread_id: *mut u64, handle: Handle) -> ResultCode {
+pub unsafe fn get_thread_id(thread_id: *mut u64, handle: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1615,12 +1554,7 @@ pub unsafe extern "C" fn __nx_svc_get_thread_id(thread_id: *mut u64, handle: Han
 /// | IN | _size_ | Size of the buffer to pass to the debugger |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#Break>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_break(
-    reason: BreakReason,
-    address: usize,
-    size: usize,
-) -> ResultCode {
+pub unsafe fn r#break(reason: BreakReason, address: usize, size: usize) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1651,11 +1585,7 @@ pub unsafe extern "C" fn __nx_svc_break(
 /// | IN | _size_ | Size of the text in bytes |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#OutputDebugString>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_output_debug_string(
-    dbg_str: *const c_char,
-    size: u64,
-) -> ResultCode {
+pub unsafe fn output_debug_string(dbg_str: *const c_char, size: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1684,8 +1614,7 @@ pub unsafe extern "C" fn __nx_svc_output_debug_string(
 /// | IN | _res_ | Result code |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ReturnFromException>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_return_from_exception(res: ResultCode) -> ! {
+pub unsafe fn return_from_exception(res: ResultCode) -> ! {
     unsafe {
         asm!(
             "svc 0x28",       // Issue the SVC call with immediate value 0x28
@@ -1695,7 +1624,7 @@ pub unsafe extern "C" fn __nx_svc_return_from_exception(res: ResultCode) -> ! {
     }
 }
 
-/// Information types for [`__nx_svc_get_info`]
+/// Information types for [`get_info`]
 #[repr(u32)]
 pub enum InfoTypeId0 {
     CoreMask = 0,
@@ -1744,13 +1673,7 @@ pub enum InfoTypeId0 {
 /// | IN | _id1_ | Second ID of the property to retrieve |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetInfo>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_info(
-    out: *mut u64,
-    id0: u32,
-    handle: Handle,
-    id1: u64,
-) -> ResultCode {
+pub unsafe fn get_info(out: *mut u64, id0: u32, handle: Handle, id1: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1783,8 +1706,7 @@ pub unsafe extern "C" fn __nx_svc_get_info(
 /// Syscall code: [FLUSH_ENTIRE_DATA_CACHE](crate::code::FLUSH_ENTIRE_DATA_CACHE) (`0x2A`).
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#FlushEntireDataCache>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_flush_entire_data_cache() {
+pub unsafe fn flush_entire_data_cache() {
     unsafe {
         asm!(
             "svc 0x2A", // Issue the SVC call with immediate value 0x2A
@@ -1805,11 +1727,7 @@ pub unsafe extern "C" fn __nx_svc_flush_entire_data_cache() {
 /// | IN | _size_ | Size of region to flush |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#FlushDataCache>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_flush_data_cache(
-    address: *mut c_void,
-    size: usize,
-) -> ResultCode {
+pub unsafe fn flush_data_cache(address: *mut c_void, size: usize) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1839,11 +1757,7 @@ pub unsafe extern "C" fn __nx_svc_flush_data_cache(
 /// | IN | _size_ | Size of the memory |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapPhysicalMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_map_physical_memory(
-    address: *mut c_void,
-    size: u64,
-) -> ResultCode {
+pub unsafe fn map_physical_memory(address: *mut c_void, size: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1857,7 +1771,7 @@ pub unsafe extern "C" fn __nx_svc_map_physical_memory(
     result
 }
 
-/// Undoes the effects of [__nx_svc_map_physical_memory]. [3.0.0+]
+/// Undoes the effects of [map_physical_memory]. [3.0.0+]
 ///
 /// `Result svcUnmapPhysicalMemory(void *address, uint64_t size);`
 ///
@@ -1869,11 +1783,7 @@ pub unsafe extern "C" fn __nx_svc_map_physical_memory(
 /// | IN | _size_ | Size of the memory |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapPhysicalMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_unmap_physical_memory(
-    address: *mut c_void,
-    size: u64,
-) -> ResultCode {
+pub unsafe fn unmap_physical_memory(address: *mut c_void, size: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -1909,8 +1819,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_physical_memory(
 /// | IN | _ns_ | Nanoseconds in the future to get scheduled thread at.
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetDebugFutureThreadInfo>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_debug_future_thread_info(
+pub unsafe fn get_debug_future_thread_info(
     context: *mut LastThreadContext,
     thread_id: *mut u64,
     debug: Handle,
@@ -1949,8 +1858,7 @@ pub unsafe extern "C" fn __nx_svc_get_debug_future_thread_info(
 /// | OUT | _flags_ | Output flags for the previously scheduled thread |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetLastThreadInfo>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_last_thread_info(
+pub unsafe fn get_last_thread_info(
     context: *mut LastThreadContext,
     tls_address: *mut u64,
     flags: *mut u32,
@@ -1994,8 +1902,7 @@ pub unsafe extern "C" fn __nx_svc_get_last_thread_info(
 /// | IN | _which_ | Resource to query |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetResourceLimitLimitValue>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_resource_limit_limit_value(
+pub unsafe fn get_resource_limit_limit_value(
     value: *mut i64,
     handle: Handle,
     which: LimitableResource,
@@ -2030,8 +1937,7 @@ pub unsafe extern "C" fn __nx_svc_get_resource_limit_limit_value(
 /// | IN | _which_ | Resource to query |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetResourceLimitCurrentValue>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_resource_limit_current_value(
+pub unsafe fn get_resource_limit_current_value(
     out: *mut i64,
     reslimit: Handle,
     which: LimitableResource,
@@ -2069,11 +1975,7 @@ pub unsafe extern "C" fn __nx_svc_get_resource_limit_current_value(
 /// | IN | _paused_ | Whether to pause or unpause the thread |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetThreadActivity>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_set_thread_activity(
-    thread: Handle,
-    paused: ThreadActivity,
-) -> ResultCode {
+pub unsafe fn set_thread_activity(thread: Handle, paused: ThreadActivity) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -2087,7 +1989,7 @@ pub unsafe extern "C" fn __nx_svc_set_thread_activity(
     result
 }
 
-/// Dumps the registers of a thread paused by [__nx_svc_set_thread_activity] (register groups: all).
+/// Dumps the registers of a thread paused by [set_thread_activity] (register groups: all).
 ///
 /// `Result svcGetThreadContext3(ThreadContext* ctx, Handle thread);`
 ///
@@ -2099,11 +2001,7 @@ pub unsafe extern "C" fn __nx_svc_set_thread_activity(
 /// | IN | _thread_ | Thread handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetThreadContext3>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_thread_context3(
-    ctx: *mut ThreadContext,
-    thread: Handle,
-) -> ResultCode {
+pub unsafe fn get_thread_context3(ctx: *mut ThreadContext, thread: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -2135,8 +2033,7 @@ pub unsafe extern "C" fn __nx_svc_get_thread_context3(
 /// | IN | _timeout_ | Maximum time in nanoseconds to wait |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#WaitForAddress>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_wait_for_address(
+pub unsafe fn wait_for_address(
     address: *mut c_void,
     arb_type: ArbitrationType,
     value: i64,
@@ -2171,8 +2068,7 @@ pub unsafe extern "C" fn __nx_svc_wait_for_address(
 /// | IN | _count_ | Number of waiting threads to signal |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SignalToAddress>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_signal_to_address(
+pub unsafe fn signal_to_address(
     address: *mut c_void,
     signal_type: SignalType,
     value: i32,
@@ -2204,8 +2100,7 @@ pub unsafe extern "C" fn __nx_svc_signal_to_address(
 /// Syscall code: [SYNCHRONIZE_PREEMPTION_STATE](crate::code::SYNCHRONIZE_PREEMPTION_STATE) (`0x36`).
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SynchronizePreemptionState>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_synchronize_preemption_state() {
+pub unsafe fn synchronize_preemption_state() {
     unsafe {
         asm!(
             "svc 0x36", // Issue the SVC call with immediate value 0x36
@@ -2231,8 +2126,7 @@ pub unsafe extern "C" fn __nx_svc_synchronize_preemption_state() {
 /// | IN | _which_ | Resource to query |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetResourceLimitPeakValue>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_resource_limit_peak_value(
+pub unsafe fn get_resource_limit_peak_value(
     out: *mut i64,
     reslimit: Handle,
     which: LimitableResource,
@@ -2274,11 +2168,7 @@ pub unsafe extern "C" fn __nx_svc_get_resource_limit_peak_value(
 /// | IN | _which_ | [IoPoolType] to create |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#:~:text=0x39,CreateIoPool>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_create_io_pool(
-    handle: *mut Handle,
-    which: IoPoolType,
-) -> ResultCode {
+pub unsafe fn create_io_pool(handle: *mut Handle, which: IoPoolType) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -2315,8 +2205,7 @@ pub unsafe extern "C" fn __nx_svc_create_io_pool(
 /// | IN | _perm_ | [MemoryPermission] configuration |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#:~:text=0x3A,CreateIoRegion>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_create_io_region(
+pub unsafe fn create_io_region(
     handle: *mut Handle,
     io_pool_h: Handle,
     physical_address: u64,
@@ -2360,8 +2249,7 @@ pub unsafe extern "C" fn __nx_svc_create_io_region(
 /// | IN | _arg0_ | Additional argument |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#DumpInfo>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_dump_info(dump_info_type: u32, arg0: u64) {
+pub unsafe fn dump_info(dump_info_type: u32, arg0: u64) {
     unsafe {
         asm!(
             "svc 0x3C",              // Issue the SVC call with immediate value 0x3C
@@ -2386,13 +2274,7 @@ pub unsafe extern "C" fn __nx_svc_dump_info(dump_info_type: u32, arg0: u64) {
 /// | IN | _arg2_ | Third additional argument |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#KernelDebug>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_kernel_debug(
-    kern_debug_type: u32,
-    arg0: u64,
-    arg1: u64,
-    arg2: u64,
-) {
+pub unsafe fn kernel_debug(kern_debug_type: u32, arg0: u64, arg1: u64, arg2: u64) {
     unsafe {
         asm!(
             "svc 0x3C",               // Issue the SVC call with immediate value 0x3C
@@ -2416,8 +2298,7 @@ pub unsafe extern "C" fn __nx_svc_kernel_debug(
 /// | IN | _kern_trace_state_ | New kernel trace state |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ChangeKernelTraceState>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_change_kernel_trace_state(kern_trace_state: u32) {
+pub unsafe fn change_kernel_trace_state(kern_trace_state: u32) {
     unsafe {
         asm!(
             "svc 0x3D",                  // Issue the SVC call with immediate value 0x3D
@@ -2445,8 +2326,7 @@ pub unsafe extern "C" fn __nx_svc_change_kernel_trace_state(kern_trace_state: u3
 /// | IN | _unk1_ | Unknown parameter |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateSession>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_create_session(
+pub unsafe fn create_session(
     server_handle: *mut Handle,
     client_handle: *mut Handle,
     is_light: bool,
@@ -2483,11 +2363,7 @@ pub unsafe extern "C" fn __nx_svc_create_session(
 /// | IN | _port_handle_ | Handle to the port to accept from |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#AcceptSession>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_accept_session(
-    session: *mut Handle,
-    port_handle: Handle,
-) -> ResultCode {
+pub unsafe fn accept_session(session: *mut Handle, port_handle: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -2515,8 +2391,7 @@ pub unsafe extern "C" fn __nx_svc_accept_session(
 /// | IN | _handle_ | Handle to perform IPC on |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ReplyAndReceiveLight>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_reply_and_receive_light(handle: Handle) -> ResultCode {
+pub unsafe fn reply_and_receive_light(handle: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -2558,8 +2433,7 @@ pub unsafe extern "C" fn __nx_svc_reply_and_receive_light(handle: Handle) -> Res
 /// | IN | _timeout_ | Timeout in nanoseconds |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ReplyAndReceive>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_reply_and_receive(
+pub unsafe fn reply_and_receive(
     index: *mut i32,
     handles: *const u32,
     handle_count: i32,
@@ -2602,8 +2476,7 @@ pub unsafe extern "C" fn __nx_svc_reply_and_receive(
 /// | IN | _timeout_ | Timeout in nanoseconds |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ReplyAndReceiveWithUserBuffer>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_reply_and_receive_with_user_buffer(
+pub unsafe fn reply_and_receive_with_user_buffer(
     index: *mut i32,
     usr_buffer: *mut c_void,
     size: u64,
@@ -2649,11 +2522,7 @@ pub unsafe extern "C" fn __nx_svc_reply_and_receive_with_user_buffer(
 /// | OUT | _client_handle_ | Output handle for client |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateEvent>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_create_event(
-    server_handle: *mut Handle,
-    client_handle: *mut Handle,
-) -> ResultCode {
+pub unsafe fn create_event(server_handle: *mut Handle, client_handle: *mut Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -2689,8 +2558,7 @@ pub unsafe extern "C" fn __nx_svc_create_event(
 /// | IN | _perm_ | Memory permissions |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#:~:text=0x46,MapIoRegion>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_map_io_region(
+pub unsafe fn map_io_region(
     io_region_h: Handle,
     address: *mut c_void,
     size: u64,
@@ -2711,7 +2579,7 @@ pub unsafe extern "C" fn __nx_svc_map_io_region(
     result
 }
 
-/// Undoes the effects of [__nx_svc_map_io_region]. [13.0.0+]
+/// Undoes the effects of [map_io_region]. [13.0.0+]
 ///
 /// `Result svcUnmapIoRegion(Handle io_region_h, void* address, uint64_t size);`
 ///
@@ -2724,12 +2592,7 @@ pub unsafe extern "C" fn __nx_svc_map_io_region(
 /// | IN | _size_ | Size of the mapping |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#:~:text=0x47,UnmapIoRegion>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_unmap_io_region(
-    io_region_h: Handle,
-    address: *mut c_void,
-    size: u64,
-) -> ResultCode {
+pub unsafe fn unmap_io_region(io_region_h: Handle, address: *mut c_void, size: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -2756,11 +2619,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_io_region(
 /// | IN | _size_ | Size of the mapping |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapPhysicalMemoryUnsafe>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_map_physical_memory_unsafe(
-    address: *mut c_void,
-    size: u64,
-) -> ResultCode {
+pub unsafe fn map_physical_memory_unsafe(address: *mut c_void, size: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -2774,7 +2633,7 @@ pub unsafe extern "C" fn __nx_svc_map_physical_memory_unsafe(
     result
 }
 
-/// Undoes the effects of [__nx_svc_map_physical_memory_unsafe]. [5.0.0+]
+/// Undoes the effects of [map_physical_memory_unsafe]. [5.0.0+]
 ///
 /// `Result svcUnmapPhysicalMemoryUnsafe(void* address, uint64_t size);`
 ///
@@ -2786,11 +2645,7 @@ pub unsafe extern "C" fn __nx_svc_map_physical_memory_unsafe(
 /// | IN | _size_ | Size of the mapping |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapPhysicalMemoryUnsafe>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_unmap_physical_memory_unsafe(
-    address: *mut c_void,
-    size: u64,
-) -> ResultCode {
+pub unsafe fn unmap_physical_memory_unsafe(address: *mut c_void, size: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -2804,7 +2659,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_physical_memory_unsafe(
     result
 }
 
-/// Sets the system-wide limit for unsafe memory mappable using [__nx_svc_map_physical_memory_unsafe]. [5.0.0+]
+/// Sets the system-wide limit for unsafe memory mappable using [map_physical_memory_unsafe]. [5.0.0+]
 ///
 /// `Result svcSetUnsafeLimit(uint64_t size);`
 ///
@@ -2815,8 +2670,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_physical_memory_unsafe(
 /// | IN | _size_ | Size limit |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetUnsafeLimit>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_set_unsafe_limit(size: u64) -> ResultCode {
+pub unsafe fn set_unsafe_limit(size: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -2850,8 +2704,7 @@ pub unsafe extern "C" fn __nx_svc_set_unsafe_limit(size: u64) -> ResultCode {
 /// | IN | _size_ | Size of the memory |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateCodeMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_create_code_memory(
+pub unsafe fn create_code_memory(
     handle: *mut Handle,
     src_addr: *mut c_void,
     size: u64,
@@ -2892,8 +2745,7 @@ pub unsafe extern "C" fn __nx_svc_create_code_memory(
 /// | IN | _perm_ | Memory permissions |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ControlCodeMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_control_code_memory(
+pub unsafe fn control_code_memory(
     code_handle: Handle,
     op: CodeMapOperation,
     dst_addr: *mut c_void,
@@ -2931,8 +2783,7 @@ pub unsafe extern "C" fn __nx_svc_control_code_memory(
 /// Syscall code: [SLEEP_SYSTEM](crate::code::SLEEP_SYSTEM) (`0x4D`).
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SleepSystem>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_sleep_system() {
+pub unsafe fn sleep_system() {
     unsafe {
         asm!(
             "svc 0x4D", // Issue the SVC call with immediate value 0x4D
@@ -2963,8 +2814,7 @@ pub unsafe extern "C" fn __nx_svc_sleep_system() {
 /// | IN | _value_ | Input value to write |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ReadWriteRegister>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_read_write_register(
+pub unsafe fn read_write_register(
     out_val: *mut u32,
     reg_addr: u64,
     mask: u32,
@@ -3004,11 +2854,7 @@ pub unsafe extern "C" fn __nx_svc_read_write_register(
 /// | IN | _paused_ | Whether to pause (1) or unpause (0) the process |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetProcessActivity>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_set_process_activity(
-    process: Handle,
-    paused: ProcessActivity,
-) -> ResultCode {
+pub unsafe fn set_process_activity(process: Handle, paused: ProcessActivity) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -3040,8 +2886,7 @@ pub unsafe extern "C" fn __nx_svc_set_process_activity(
 /// | IN | _other_perm_ | [MemoryPermission] for other processes |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateSharedMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_create_shared_memory(
+pub unsafe fn create_shared_memory(
     handle: *mut Handle,
     size: usize,
     local_perm: u32, // TODO: MemoryPermission bitfield
@@ -3079,8 +2924,7 @@ pub unsafe extern "C" fn __nx_svc_create_shared_memory(
 /// | IN | _perm_ | Memory permissions |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapTransferMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_map_transfer_memory(
+pub unsafe fn map_transfer_memory(
     tmem_handle: Handle,
     addr: *mut c_void,
     size: usize,
@@ -3114,8 +2958,7 @@ pub unsafe extern "C" fn __nx_svc_map_transfer_memory(
 /// | IN | _size_ | Size of the transfer memory |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapTransferMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_unmap_transfer_memory(
+pub unsafe fn unmap_transfer_memory(
     tmem_handle: Handle,
     addr: *mut c_void,
     size: usize,
@@ -3151,12 +2994,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_transfer_memory(
 /// | IN | _flag_ | Flags for the event |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateInterruptEvent>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_create_interrupt_event(
-    handle: *mut Handle,
-    irq_num: u64,
-    flag: u32,
-) -> ResultCode {
+pub unsafe fn create_interrupt_event(handle: *mut Handle, irq_num: u64, flag: u32) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -3186,11 +3024,7 @@ pub unsafe extern "C" fn __nx_svc_create_interrupt_event(
 /// | IN | _virtaddr_ | Virtual address to query |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#QueryPhysicalAddress>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_query_physical_address(
-    out: *mut PhysicalMemoryInfo,
-    virtaddr: u64,
-) -> ResultCode {
+pub unsafe fn query_physical_address(out: *mut PhysicalMemoryInfo, virtaddr: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -3222,8 +3056,7 @@ pub unsafe extern "C" fn __nx_svc_query_physical_address(
 /// | IN | _size_ | Size of the region |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#:~:text=%5B10.0.0%2B%5D-,0x55,QueryMemoryMapping,-uintptr_t%20*out_address%2C%20size_t>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_query_memory_mapping(
+pub unsafe fn query_memory_mapping(
     virtaddr: *mut u64,
     out_size: *mut u64,
     physaddr: u64,
@@ -3261,12 +3094,7 @@ pub unsafe extern "C" fn __nx_svc_query_memory_mapping(
 /// | IN | _size_ | Size of the region |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#QueryIoMapping>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_legacy_query_io_mapping(
-    virtaddr: *mut u64,
-    physaddr: u64,
-    size: u64,
-) -> ResultCode {
+pub unsafe fn legacy_query_io_mapping(virtaddr: *mut u64, physaddr: u64, size: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -3301,8 +3129,7 @@ pub unsafe extern "C" fn __nx_svc_legacy_query_io_mapping(
 /// | IN | _dev_size_ | Size of the device address space |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateDeviceAddressSpace>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_create_device_address_space(
+pub unsafe fn create_device_address_space(
     handle: *mut Handle,
     dev_addr: u64,
     dev_size: u64,
@@ -3336,11 +3163,7 @@ pub unsafe extern "C" fn __nx_svc_create_device_address_space(
 /// | IN | _handle_ | Handle to the device address space |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#AttachDeviceAddressSpace>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_attach_device_address_space(
-    device: u64,
-    handle: Handle,
-) -> ResultCode {
+pub unsafe fn attach_device_address_space(device: u64, handle: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -3366,11 +3189,7 @@ pub unsafe extern "C" fn __nx_svc_attach_device_address_space(
 /// | IN | _handle_ | Handle to the device address space |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#DetachDeviceAddressSpace>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_detach_device_address_space(
-    device: u64,
-    handle: Handle,
-) -> ResultCode {
+pub unsafe fn detach_device_address_space(device: u64, handle: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -3400,8 +3219,7 @@ pub unsafe extern "C" fn __nx_svc_detach_device_address_space(
 /// | IN | _option_ | Mapping options |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapDeviceAddressSpaceByForce>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_map_device_address_space_by_force(
+pub unsafe fn map_device_address_space_by_force(
     handle: Handle,
     proc_handle: Handle,
     map_addr: u64,
@@ -3442,8 +3260,7 @@ pub unsafe extern "C" fn __nx_svc_map_device_address_space_by_force(
 /// | IN | _option_ | Mapping options |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapDeviceAddressSpaceAligned>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_map_device_address_space_aligned(
+pub unsafe fn map_device_address_space_aligned(
     handle: Handle,
     proc_handle: Handle,
     map_addr: u64,
@@ -3485,8 +3302,7 @@ pub unsafe extern "C" fn __nx_svc_map_device_address_space_aligned(
 /// | IN | _perm_ | Memory permissions |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapDeviceAddressSpace>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_map_device_address_space(
+pub unsafe fn map_device_address_space(
     out_mapped_size: *mut u64,
     handle: Handle,
     proc_handle: Handle,
@@ -3531,8 +3347,7 @@ pub unsafe extern "C" fn __nx_svc_map_device_address_space(
 /// | IN | _dev_addr_ | Device address |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapDeviceAddressSpace>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_unmap_device_address_space(
+pub unsafe fn unmap_device_address_space(
     handle: Handle,
     proc_handle: Handle,
     map_addr: u64,
@@ -3572,8 +3387,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_device_address_space(
 /// | IN | _size_ | Size of the region |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#InvalidateProcessDataCache>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_invalidate_process_data_cache(
+pub unsafe fn invalidate_process_data_cache(
     process: Handle,
     address: *mut c_void,
     size: usize,
@@ -3605,8 +3419,7 @@ pub unsafe extern "C" fn __nx_svc_invalidate_process_data_cache(
 /// | IN | _size_ | Size of the region |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#StoreProcessDataCache>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_store_process_data_cache(
+pub unsafe fn store_process_data_cache(
     process: Handle,
     address: *mut c_void,
     size: usize,
@@ -3638,8 +3451,7 @@ pub unsafe extern "C" fn __nx_svc_store_process_data_cache(
 /// | IN | _size_ | Size of the region |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#FlushProcessDataCache>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_flush_process_data_cache(
+pub unsafe fn flush_process_data_cache(
     process: Handle,
     address: *mut c_void,
     size: usize,
@@ -3674,11 +3486,7 @@ pub unsafe extern "C" fn __nx_svc_flush_process_data_cache(
 /// | IN | _process_id_ | Process ID to debug |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#DebugActiveProcess>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_debug_active_process(
-    debug: *mut Handle,
-    process_id: u64,
-) -> ResultCode {
+pub unsafe fn debug_active_process(debug: *mut Handle, process_id: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -3706,8 +3514,7 @@ pub unsafe extern "C" fn __nx_svc_debug_active_process(
 /// | IN | _debug_ | Debug handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#BreakDebugProcess>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_break_debug_process(debug: Handle) -> ResultCode {
+pub unsafe fn break_debug_process(debug: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -3731,8 +3538,7 @@ pub unsafe extern "C" fn __nx_svc_break_debug_process(debug: Handle) -> ResultCo
 /// | IN | _debug_ | Debug handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#TerminateDebugProcess>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_terminate_debug_process(debug: Handle) -> ResultCode {
+pub unsafe fn terminate_debug_process(debug: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -3757,8 +3563,7 @@ pub unsafe extern "C" fn __nx_svc_terminate_debug_process(debug: Handle) -> Resu
 /// | IN | _debug_ | Debug handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetDebugEvent>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_debug_event(event: *mut c_void, debug: Handle) -> ResultCode {
+pub unsafe fn get_debug_event(event: *mut c_void, debug: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -3786,8 +3591,7 @@ pub unsafe extern "C" fn __nx_svc_get_debug_event(event: *mut c_void, debug: Han
 /// | IN | _num_tids_ | Number of thread IDs |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ContinueDebugEvent>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_continue_debug_event(
+pub unsafe fn continue_debug_event(
     debug: Handle,
     flags: u32,
     tid_list: *mut u64,
@@ -3821,12 +3625,7 @@ pub unsafe extern "C" fn __nx_svc_continue_debug_event(
 /// | IN | _thread_id_ | Thread ID |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ContinueDebugEvent>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_legacy_continue_debug_event(
-    debug: Handle,
-    flags: u32,
-    thread_id: u64,
-) -> ResultCode {
+pub unsafe fn legacy_continue_debug_event(debug: Handle, flags: u32, thread_id: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -3864,8 +3663,7 @@ pub unsafe extern "C" fn __nx_svc_legacy_continue_debug_event(
 /// | IN | _max_pids_count_ | Maximum number of process IDs to write |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetProcessList>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_process_list(
+pub unsafe fn get_process_list(
     pids_count: *mut i32,
     pids_list: *mut u64,
     max_pids_count: u32,
@@ -3901,8 +3699,7 @@ pub unsafe extern "C" fn __nx_svc_get_process_list(
 /// | IN | _debug_ | Debug handle, or 0 to use the current process |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetThreadList>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_thread_list(
+pub unsafe fn get_thread_list(
     num_out: *mut i32,
     tids_out: *mut u64,
     max_tids: u32,
@@ -3944,8 +3741,7 @@ pub unsafe extern "C" fn __nx_svc_get_thread_list(
 /// | IN | _flags_ | Context flags |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetDebugThreadContext>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_debug_thread_context(
+pub unsafe fn get_debug_thread_context(
     ctx: *mut ThreadContext,
     debug: Handle,
     thread_id: u64,
@@ -3980,8 +3776,7 @@ pub unsafe extern "C" fn __nx_svc_get_debug_thread_context(
 /// | IN | _flags_ | Context flags |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetDebugThreadContext>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_set_debug_thread_context(
+pub unsafe fn set_debug_thread_context(
     debug: Handle,
     thread_id: u64,
     ctx: *mut ThreadContext,
@@ -4016,8 +3811,7 @@ pub unsafe extern "C" fn __nx_svc_set_debug_thread_context(
 /// | IN | _addr_ | Address to query |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#QueryDebugProcessMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_query_debug_process_memory(
+pub unsafe fn query_debug_process_memory(
     meminfo_ptr: *mut MemoryInfo,
     pageinfo: *mut u32,
     debug: Handle,
@@ -4055,8 +3849,7 @@ pub unsafe extern "C" fn __nx_svc_query_debug_process_memory(
 /// | IN | _size_ | Size to read |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ReadDebugProcessMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_read_debug_process_memory(
+pub unsafe fn read_debug_process_memory(
     buffer: *mut c_void,
     debug: Handle,
     addr: u64,
@@ -4091,8 +3884,7 @@ pub unsafe extern "C" fn __nx_svc_read_debug_process_memory(
 /// | IN | _size_ | Size to write |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#WriteDebugProcessMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_write_debug_process_memory(
+pub unsafe fn write_debug_process_memory(
     debug: Handle,
     buffer: *const c_void,
     addr: u64,
@@ -4126,12 +3918,7 @@ pub unsafe extern "C" fn __nx_svc_write_debug_process_memory(
 /// | IN | _value_ | Breakpoint value |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetHardwareBreakPoint>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_set_hardware_breakpoint(
-    which: u32,
-    flags: u64,
-    value: u64,
-) -> ResultCode {
+pub unsafe fn set_hardware_breakpoint(which: u32, flags: u64, value: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -4161,8 +3948,7 @@ pub unsafe extern "C" fn __nx_svc_set_hardware_breakpoint(
 /// | IN | _param_ | Parameter to get |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetDebugThreadParam>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_debug_thread_param(
+pub unsafe fn get_debug_thread_param(
     out_64: *mut u64,
     out_32: *mut u32,
     debug: Handle,
@@ -4207,13 +3993,7 @@ pub unsafe extern "C" fn __nx_svc_get_debug_thread_param(
 /// | IN | _id1_ | Second ID |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetSystemInfo>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_system_info(
-    out: *mut u64,
-    id0: u64,
-    handle: Handle,
-    id1: u64,
-) -> ResultCode {
+pub unsafe fn get_system_info(out: *mut u64, id0: u64, handle: Handle, id1: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -4251,8 +4031,7 @@ pub unsafe extern "C" fn __nx_svc_get_system_info(
 /// | IN | _name_ | Name of the port |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreatePort>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_create_port(
+pub unsafe fn create_port(
     port_server: *mut Handle,
     port_client: *mut Handle,
     max_sessions: i32,
@@ -4292,8 +4071,7 @@ pub unsafe extern "C" fn __nx_svc_create_port(
 /// | IN | _max_sessions_ | Maximum number of sessions |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ManageNamedPort>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_manage_named_port(
+pub unsafe fn manage_named_port(
     port_server: *mut Handle,
     name: *const c_char,
     max_sessions: i32,
@@ -4327,11 +4105,7 @@ pub unsafe extern "C" fn __nx_svc_manage_named_port(
 /// | IN | _port_ | Port handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#ConnectToPort>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_connect_to_port(
-    session: *mut Handle,
-    port: Handle,
-) -> ResultCode {
+pub unsafe fn connect_to_port(session: *mut Handle, port: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -4366,8 +4140,7 @@ pub unsafe extern "C" fn __nx_svc_connect_to_port(
 /// | IN | _perm_ | New memory permissions |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetProcessMemoryPermission>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_set_process_memory_permission(
+pub unsafe fn set_process_memory_permission(
     proc: Handle,
     addr: u64,
     size: u64,
@@ -4402,8 +4175,7 @@ pub unsafe extern "C" fn __nx_svc_set_process_memory_permission(
 /// | IN | _size_ | Size of the memory to map |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapProcessMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_map_process_memory(
+pub unsafe fn map_process_memory(
     dst: *mut c_void,
     proc: Handle,
     src: u64,
@@ -4424,7 +4196,7 @@ pub unsafe extern "C" fn __nx_svc_map_process_memory(
     result
 }
 
-/// Undoes the effects of [__nx_svc_map_process_memory].
+/// Undoes the effects of [map_process_memory].
 ///
 /// `Result svcUnmapProcessMemory(void* dst, Handle proc, uint64_t src, uint64_t size);`
 ///
@@ -4438,8 +4210,7 @@ pub unsafe extern "C" fn __nx_svc_map_process_memory(
 /// | IN | _size_ | Size of the memory |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapProcessMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_unmap_process_memory(
+pub unsafe fn unmap_process_memory(
     dst: *mut c_void,
     proc: Handle,
     src: u64,
@@ -4460,7 +4231,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_process_memory(
     result
 }
 
-/// Equivalent to [__nx_svc_query_memory], for another process.
+/// Equivalent to [query_memory], for another process.
 ///
 /// <div class="warning">
 /// This is a privileged syscall. Use envIsSyscallHinted to check if it is available.
@@ -4478,8 +4249,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_process_memory(
 /// | IN | _addr_ | Address to query |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#QueryProcessMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_query_process_memory(
+pub unsafe fn query_process_memory(
     meminfo_ptr: *mut MemoryInfo,
     pageinfo: *mut u32,
     proc: Handle,
@@ -4521,13 +4291,7 @@ pub unsafe extern "C" fn __nx_svc_query_process_memory(
 /// | IN | _size_ | Size of the mapping |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapProcessCodeMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_map_process_code_memory(
-    proc: Handle,
-    dst: u64,
-    src: u64,
-    size: u64,
-) -> ResultCode {
+pub unsafe fn map_process_code_memory(proc: Handle, dst: u64, src: u64, size: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -4543,7 +4307,7 @@ pub unsafe extern "C" fn __nx_svc_map_process_code_memory(
     result
 }
 
-/// Undoes the effects of [__nx_svc_map_process_code_memory].
+/// Undoes the effects of [map_process_code_memory].
 ///
 /// <div class="warning">
 /// This is a privileged syscall. Use envIsSyscallHinted to check if it is available.
@@ -4561,13 +4325,7 @@ pub unsafe extern "C" fn __nx_svc_map_process_code_memory(
 /// | IN | _size_ | Size of the mapping |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#UnmapProcessCodeMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_unmap_process_code_memory(
-    proc: Handle,
-    dst: u64,
-    src: u64,
-    size: u64,
-) -> ResultCode {
+pub unsafe fn unmap_process_code_memory(proc: Handle, dst: u64, src: u64, size: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -4605,8 +4363,7 @@ pub unsafe extern "C" fn __nx_svc_unmap_process_code_memory(
 /// | IN | _cap_num_ | Number of kernel capabilities |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateProcess>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_create_process(
+pub unsafe fn create_process(
     out: *mut Handle,
     proc_info: *const u8,
     caps: *const u32,
@@ -4646,8 +4403,7 @@ pub unsafe extern "C" fn __nx_svc_create_process(
 /// | IN | _stack_size_ | Stack size for the main thread |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#StartProcess>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_start_process(
+pub unsafe fn start_process(
     proc: Handle,
     main_prio: i32,
     default_cpu: i32,
@@ -4683,8 +4439,7 @@ pub unsafe extern "C" fn __nx_svc_start_process(
 /// | IN | _proc_ | Handle of the process to terminate |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#TerminateProcess>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_terminate_process(proc: Handle) -> ResultCode {
+pub unsafe fn terminate_process(proc: Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -4714,12 +4469,7 @@ pub unsafe extern "C" fn __nx_svc_terminate_process(proc: Handle) -> ResultCode 
 /// | IN | _which_ | Type of information to retrieve |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#GetProcessInfo>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_get_process_info(
-    out: *mut i64,
-    proc: Handle,
-    which: ProcessInfoType,
-) -> ResultCode {
+pub unsafe fn get_process_info(out: *mut i64, proc: Handle, which: ProcessInfoType) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -4752,8 +4502,7 @@ pub unsafe extern "C" fn __nx_svc_get_process_info(
 /// | OUT | _out_ | Output resource limit handle |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateResourceLimit>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_create_resource_limit(out: *mut Handle) -> ResultCode {
+pub unsafe fn create_resource_limit(out: *mut Handle) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -4782,8 +4531,7 @@ pub unsafe extern "C" fn __nx_svc_create_resource_limit(out: *mut Handle) -> Res
 /// | IN | _value_ | Value to set |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetResourceLimitLimitValue>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_set_resource_limit_limit_value(
+pub unsafe fn set_resource_limit_limit_value(
     reslimit: Handle,
     which: LimitableResource,
     value: u64,
@@ -4821,8 +4569,7 @@ pub unsafe extern "C" fn __nx_svc_set_resource_limit_limit_value(
 /// | IN | _regs_ | Arguments to pass to the secure monitor |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CallSecureMonitor>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_call_secure_monitor(regs: *mut SecmonArgs) {
+pub unsafe fn call_secure_monitor(regs: *mut SecmonArgs) {
     unsafe {
         asm!(
             "str x0, [sp, #-16]!",     // Store x0 on the stack
@@ -4859,11 +4606,7 @@ pub unsafe extern "C" fn __nx_svc_call_secure_monitor(regs: *mut SecmonArgs) {
 /// | IN | _size_ | Size of memory to map |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#:~:text=0x90,MapInsecurePhysicalMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_map_insecure_physical_memory(
-    address: *mut c_void,
-    size: u64,
-) -> ResultCode {
+pub unsafe fn map_insecure_physical_memory(address: *mut c_void, size: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(
@@ -4877,7 +4620,7 @@ pub unsafe extern "C" fn __nx_svc_map_insecure_physical_memory(
     result
 }
 
-/// Undoes the effects of [__nx_svc_map_insecure_physical_memory]. [15.0.0+]
+/// Undoes the effects of [map_insecure_physical_memory]. [15.0.0+]
 ///
 /// `Result svcUnmapInsecurePhysicalMemory(void *address, uint64_t size);`
 ///
@@ -4889,11 +4632,7 @@ pub unsafe extern "C" fn __nx_svc_map_insecure_physical_memory(
 /// | IN | _size_ | Size of memory to unmap |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#:~:text=0x91,UnmapInsecurePhysicalMemory>
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_svc_unmap_insecure_physical_memory(
-    address: *mut c_void,
-    size: u64,
-) -> ResultCode {
+pub unsafe fn unmap_insecure_physical_memory(address: *mut c_void, size: u64) -> ResultCode {
     let result: ResultCode;
     unsafe {
         asm!(

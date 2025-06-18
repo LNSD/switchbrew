@@ -10,6 +10,10 @@ test = false
 doctest = false
 bench = false
 
+[features]
+# Enable the __nx_svc FFI
+ffi = []
+
 [dependencies]
 bitflags = "2.9"
 panic-abort = "0.3.2"

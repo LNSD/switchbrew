@@ -15,6 +15,7 @@ nx_svc_tgt = custom_target(
         '--profile', get_option('buildtype') == 'release' ? 'release' : 'dev',
         '--target-dir', meson.global_build_root() / 'cargo-target',
         '--artifact-dir', '@OUTDIR@',
+        '--features', 'ffi',
     ],
     output : ['libnx_svc.a', 'libnx_svc.rlib'],
     console: true,

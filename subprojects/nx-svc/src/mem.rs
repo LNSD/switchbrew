@@ -22,7 +22,7 @@ pub type PageInfo = u32;
 /// successfully set, or a [`SetHeapSizeError`] on failure.
 pub fn set_heap_size(size: usize) -> Result<*mut c_void, SetHeapSizeError> {
     let mut addr = ptr::null_mut();
-    let rc = unsafe { raw::__nx_svc_set_heap_size(&mut addr, size) };
+    let rc = unsafe { raw::set_heap_size(&mut addr, size) };
     RawResult::from_raw(rc).map(addr, |rc| match rc.description() {
         desc if KError::InvalidSize == desc => SetHeapSizeError::InvalidSize,
         desc if KError::OutOfResource == desc => SetHeapSizeError::OutOfResource,
@@ -146,7 +146,7 @@ pub fn query_memory(addr: usize) -> Result<(MemoryInfo, PageInfo), QueryMemoryEr
     let mut mem_info = Default::default();
     let mut page_info = Default::default();
 
-    let rc = unsafe { raw::__nx_svc_query_memory(&mut mem_info, &mut page_info, addr) };
+    let rc = unsafe { raw::query_memory(&mut mem_info, &mut page_info, addr) };
     RawResult::from_raw(rc).map((mem_info.into(), page_info), |rc| match rc.description() {
         desc if KError::InvalidHandle == desc => QueryMemoryError::InvalidHandle,
         desc if KError::InvalidAddress == desc => QueryMemoryError::InvalidAddress,
@@ -216,7 +216,7 @@ pub fn unmap_memory(
     src_addr: *mut c_void,
     size: usize,
 ) -> Result<(), UnmapMemoryError> {
-    let rc = unsafe { raw::__nx_svc_unmap_memory(dst_addr, src_addr, size) };
+    let rc = unsafe { raw::unmap_memory(dst_addr, src_addr, size) };
     RawResult::from_raw(rc).map((), |rc| match rc.description() {
         desc if KError::InvalidHandle == desc => UnmapMemoryError::InvalidHandle,
         desc if KError::InvalidAddress == desc => UnmapMemoryError::InvalidAddress,

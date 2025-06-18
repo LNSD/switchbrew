@@ -2,11 +2,8 @@
 
 use crate::{
     error::{KernelError as KError, ResultCode, ToRawResultCode},
-    raw::{
-        __nx_svc_arbitrate_lock, __nx_svc_arbitrate_unlock, __nx_svc_signal_process_wide_key,
-        __nx_svc_wait_process_wide_key_atomic, Handle,
-    },
-    result::{Error, Result, raw},
+    raw::{self, Handle},
+    result::{Error, Result, raw::Result as RawResult},
 };
 
 /// Bitmask for the _waiters bitflag_ in mutex raw tag values.
@@ -56,8 +53,8 @@ pub unsafe fn arbitrate_lock(
     mutex: *mut u32,
     curr_thread_handle: Handle,
 ) -> Result<(), ArbitrateLockError> {
-    let rc = unsafe { __nx_svc_arbitrate_lock(owner_thread_handle, mutex, curr_thread_handle) };
-    raw::Result::from_raw(rc).map((), |rc| match rc.description() {
+    let rc = unsafe { raw::arbitrate_lock(owner_thread_handle, mutex, curr_thread_handle) };
+    RawResult::from_raw(rc).map((), |rc| match rc.description() {
         desc if KError::InvalidHandle == desc => ArbitrateLockError::InvalidHandle,
         desc if KError::InvalidAddress == desc => ArbitrateLockError::InvalidMemState,
         desc if KError::TerminationRequested == desc => ArbitrateLockError::ThreadTerminating,
@@ -112,8 +109,8 @@ pub enum ArbitrateLockError {
 /// - Dereferences a raw pointer (`mutex`)
 /// - Interacts directly with thread scheduling and kernel synchronization primitives
 pub unsafe fn arbitrate_unlock(mutex: *mut u32) -> Result<(), ArbitrateUnlockError> {
-    let rc = unsafe { __nx_svc_arbitrate_unlock(mutex) };
-    raw::Result::from_raw(rc).map((), |rc| match rc.description() {
+    let rc = unsafe { raw::arbitrate_unlock(mutex) };
+    RawResult::from_raw(rc).map((), |rc| match rc.description() {
         desc if KError::InvalidAddress == desc => ArbitrateUnlockError::InvalidMemState,
         _ => ArbitrateUnlockError::Unknown(Error::from(rc)),
     })
@@ -176,8 +173,8 @@ pub unsafe fn wait_process_wide_key_atomic(
     tag: u32,
     timeout_ns: u64,
 ) -> Result<(), WaitProcessWideKeyError> {
-    let res = unsafe { __nx_svc_wait_process_wide_key_atomic(mutex, condvar, tag, timeout_ns) };
-    raw::Result::from_raw(res).map((), |rc| match rc.description() {
+    let res = unsafe { raw::wait_process_wide_key_atomic(mutex, condvar, tag, timeout_ns) };
+    RawResult::from_raw(res).map((), |rc| match rc.description() {
         desc if KError::InvalidAddress == desc => WaitProcessWideKeyError::InvalidMemState,
         desc if KError::TerminationRequested == desc => WaitProcessWideKeyError::ThreadTerminating,
         desc if KError::TimedOut == desc => WaitProcessWideKeyError::TimedOut,
@@ -250,5 +247,5 @@ impl ToRawResultCode for WaitProcessWideKeyError {
 /// - Dereferences a raw pointer (`condvar`)
 /// - Interacts directly with thread scheduling and kernel synchronization primitives
 pub unsafe fn signal_process_wide_key(condvar: *mut u32, count: i32) {
-    unsafe { __nx_svc_signal_process_wide_key(condvar, count) };
+    unsafe { raw::signal_process_wide_key(condvar, count) };
 }

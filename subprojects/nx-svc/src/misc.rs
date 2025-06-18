@@ -109,7 +109,7 @@ pub unsafe fn get_info(info_type: InfoType, handle: Handle) -> Result<u64, GetIn
     let (id0, id1) = info_type.to_ids();
     let mut out = 0u64;
 
-    let rc = unsafe { raw::__nx_svc_get_info(&mut out, id0, handle, id1) };
+    let rc = unsafe { raw::get_info(&mut out, id0, handle, id1) };
     RawResult::from_raw(rc).map(out, |rc| {
         let desc = rc.description();
 

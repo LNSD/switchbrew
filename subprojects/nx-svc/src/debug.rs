@@ -8,7 +8,7 @@ use super::raw;
 /// # Arguments
 /// * `reason` - The reason for the break event
 pub fn break_event(reason: BreakReason, address: usize, size: usize) -> ! {
-    let _ = unsafe { raw::__nx_svc_break(reason.into(), address, size) };
+    let _ = unsafe { raw::r#break(reason.into(), address, size) };
     unreachable!()
 }
 

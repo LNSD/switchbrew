@@ -24,6 +24,9 @@
 
 #![no_std]
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
 pub mod code;
 pub mod debug;
 pub mod error;
