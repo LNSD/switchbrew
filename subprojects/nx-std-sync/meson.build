@@ -35,6 +35,7 @@ nx_std_sync_tgt = custom_target(
         '--profile', get_option('buildtype') == 'release' ? 'release' : 'dev',
         '--target-dir', meson.global_build_root() / 'cargo-target',
         '--artifact-dir', '@OUTDIR@',
+        '--features', 'ffi',
     ],
     output : ['libnx_std_sync.a', 'libnx_std_sync.rlib'],
     console: true,

@@ -7,6 +7,9 @@ extern crate alloc;
 #[global_allocator]
 static ALLOC: nx_alloc::GlobalLinkedListAllocator = nx_alloc::GlobalLinkedListAllocator;
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
 pub mod barrier;
 pub mod condvar;
 pub mod mutex;
