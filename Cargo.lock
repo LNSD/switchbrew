@@ -47,6 +47,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nx-std-sync"
+version = "0.1.0"
+dependencies = [
+ "nx-sync",
+ "panic-abort",
+ "panic-halt",
+]
+
+[[package]]
 name = "nx-svc"
 version = "0.1.0"
 dependencies = [

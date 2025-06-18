@@ -15,7 +15,7 @@
 
 use core::fmt;
 
-use crate::sys::switch as sys;
+use nx_sync::sys::switch as sys;
 
 /// A counting semaphore synchronization primitive.
 ///

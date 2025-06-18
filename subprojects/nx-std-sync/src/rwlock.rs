@@ -10,8 +10,9 @@ use core::{
     ptr::NonNull,
 };
 
+use nx_sync::sys::switch as sys;
+
 pub use crate::result::{TryLockError, TryLockResult};
-use crate::sys::switch as sys;
 
 /// A reader-writer lock
 ///

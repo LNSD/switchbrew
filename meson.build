@@ -34,6 +34,9 @@ endif
 if get_option('use_nx_alloc').disabled()
     subproject('nx-alloc')
 endif
+if get_option('use_nx_std_sync').disabled()
+    subproject('nx-std-sync')
+endif
 
 # Executables
 subproject('tests')

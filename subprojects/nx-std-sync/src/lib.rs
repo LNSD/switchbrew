@@ -1,8 +1,12 @@
-//! # nx-sync
+//! # nx-std-sync
 #![no_std]
 
-mod ffi;
-pub mod sys;
+pub mod barrier;
+pub mod condvar;
+pub mod mutex;
+mod result;
+pub mod rwlock;
+pub mod semaphore;
 
 /// #[panic_handler]
 ///

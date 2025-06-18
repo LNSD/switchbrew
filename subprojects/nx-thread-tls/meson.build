@@ -5,7 +5,7 @@ cargo = find_program('cargo', required : true)
 #------------------------------------------------
 # Dependencies
 #------------------------------------------------
-# Rust dependencies here ar just informative so Mesom can build the dependencies in the correct order
+# Rust dependencies here ar just informative so Meson can build the dependencies in the correct order
 # nx-cpu
 nx_cpu_proj = subproject('nx-cpu')
 nx_cpu_dep = nx_cpu_proj.get_variable('nx_cpu_dep')
@@ -31,7 +31,7 @@ nx_thread_tls_tgt = custom_target(
         '--target-dir', meson.global_build_root() / 'cargo-target',
         '--artifact-dir', '@OUTDIR@',
     ],
-    output : 'libnx_thread_tls.a',
+    output : ['libnx_thread_tls.a', 'libnx_thread_tls.rlib'],
     console: true,
     build_by_default : true,
     build_always_stale: true,
@@ -42,5 +42,5 @@ nx_thread_tls_dep = declare_dependency(
     link_with : nx_thread_tls_tgt[0],
     dependencies : deps,
 )
-# Linker script override for thread functions
+# Linker script override for thread-tls functions
 nx_thread_tls_ld_override = meson.current_source_dir() / 'thread_tls_redirect.ld'

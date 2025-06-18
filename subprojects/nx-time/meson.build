@@ -5,7 +5,7 @@ cargo = find_program('cargo', required : true)
 #------------------------------------------------
 # Dependencies
 #------------------------------------------------
-# Rust dependencies here ar just informative so Mesom can build the dependencies in the correct order
+# Rust dependencies here ar just informative so Meson can build the dependencies in the correct order
 # nx-cpu
 nx_cpu_proj = subproject('nx-cpu')
 nx_cpu_dep = nx_cpu_proj.get_variable('nx_cpu_dep')
@@ -31,7 +31,7 @@ nx_time_tgt = custom_target(
         '--target-dir', meson.global_build_root() / 'cargo-target',
         '--artifact-dir', '@OUTDIR@',
     ],
-    output : 'libnx_time.a',
+    output : ['libnx_time.a', 'libnx_time.rlib'],
     console: true,
     build_by_default : true,
     build_always_stale: true,

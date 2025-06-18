@@ -16,7 +16,8 @@ nx_svc_tgt = custom_target(
         '--target-dir', meson.global_build_root() / 'cargo-target',
         '--artifact-dir', '@OUTDIR@',
     ],
-    output : 'libnx_svc.a',
+    output : ['libnx_svc.a', 'libnx_svc.rlib'],
+    console: true,
     build_by_default : true,
     build_always_stale: true,
 )

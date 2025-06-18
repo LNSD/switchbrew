@@ -2,7 +2,9 @@
 
 use core::fmt;
 
-use crate::{mutex, mutex::MutexGuard, sys::switch as sys};
+use nx_sync::sys::switch as sys;
+
+use crate::{mutex, mutex::MutexGuard};
 
 /// A Condition Variable
 ///

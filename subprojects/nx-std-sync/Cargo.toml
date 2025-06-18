@@ -1,0 +1,16 @@
+[package]
+name = "nx-std-sync"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "nx_std_sync"
+crate-type = ["rlib", "staticlib"]
+test = false
+doctest = false
+bench = false
+
+[dependencies]
+nx-sync = { version = "0.1.0", path = "../nx-sync" }
+panic-abort = "0.3.2"
+panic-halt = "1.0.0"

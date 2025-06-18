@@ -6,8 +6,9 @@ use core::{
     ops::{Deref, DerefMut},
 };
 
+use nx_sync::sys::switch as sys;
+
 pub use crate::result::{TryLockError, TryLockResult};
-use crate::sys::switch as sys;
 
 /// A mutual exclusion primitive useful for protecting shared data
 ///
