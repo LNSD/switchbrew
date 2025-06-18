@@ -33,7 +33,7 @@ nx_sync_tgt = custom_target(
         cargo, 'build',
         '--package', meson.project_name(),
         '--profile', get_option('buildtype') == 'release' ? 'release' : 'dev',
-        '--target-dir', '@PRIVATE_DIR@',
+        '--target-dir', meson.global_build_root() / 'cargo-target',
         '--artifact-dir', '@OUTDIR@',
     ],
     output : 'libnx_sync.a',

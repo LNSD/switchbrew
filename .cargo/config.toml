@@ -1,12 +1,30 @@
+# This file configures Cargo's behavior for this project.
+
 [build]
+# Set the default target platform for `cargo build`.
+# This is for the Nintendo Switch, using a freestanding (no-std) environment.
+# For more information on this target, see:
 # https://doc.rust-lang.org/rustc/platform-support/aarch64-nintendo-switch-freestanding.html
 target = ["aarch64-nintendo-switch-freestanding"]
 
+# Override the default target directory for build artifacts.
+# This places all compiled files in `buildDir/cargo-target` instead of the default `target/`.
+target-dir = "buildDir/cargo-target"
+
 [unstable]
-# cargo-std-aware build unstable features
-# https://doc.rust-lang.org/cargo/reference/unstable.html#build-std
-# https://doc.rust-lang.org/cargo/reference/unstable.html#build-std-features
+# This section enables unstable Cargo features.
+
+# The `build-std` feature allows Cargo to recompile parts of the standard library.
+# This is necessary for custom targets like `aarch64-nintendo-switch-freestanding`
+# which don't have a pre-built standard library.
+# We are building `core`, `compiler_builtins`, and `alloc`.
+# See:
+#  - https://doc.rust-lang.org/cargo/reference/unstable.html#build-std
+#  - https://doc.rust-lang.org/cargo/reference/unstable.html#build-std-features
 build-std = ["core", "compiler_builtins", "alloc"]
 build-std-features = ["compiler-builtins-mem"]
-# https://doc.rust-lang.org/cargo/commands/cargo-build.html#output-options
+
+# The `unstable-options` flag is required to use other unstable options,
+# like `build-std`. It also allows passing unstable options to rustc.
+# See: https://doc.rust-lang.org/cargo/commands/cargo-build.html#output-options
 unstable-options = true
