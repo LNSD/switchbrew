@@ -1,5 +1,9 @@
 #![no_std]
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
+pub mod sleep;
 pub mod sys;
 
 /// #[panic_handler]

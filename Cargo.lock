@@ -82,6 +82,7 @@ dependencies = [
 name = "nx-thread"
 version = "0.1.0"
 dependencies = [
+ "nx-svc",
  "nx-thread-tls",
  "panic-abort",
  "panic-halt",

@@ -10,7 +10,12 @@ test = false
 doctest = false
 bench = false
 
+[features]
+# Enable the __nx_thread FFI
+ffi = []
+
 [dependencies]
+nx-svc = { version = "0.1.0", path = "../nx-svc" }
 nx-thread-tls = { version = "0.1.0", path = "../nx-thread-tls" }
 panic-abort = "0.3.2"
 panic-halt = "1.0.0"

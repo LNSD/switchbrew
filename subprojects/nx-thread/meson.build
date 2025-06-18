@@ -6,12 +6,17 @@ cargo = find_program('cargo', required : true)
 # Dependencies
 #------------------------------------------------
 # Rust dependencies here ar just informative so Meson can build the dependencies in the correct order
+# nx-svc
+nx_svc_proj = subproject('nx-svc')
+nx_svc_dep = nx_svc_proj.get_variable('nx_svc_dep')
+
 # nx-thread-tls
 nx_thread_tls_proj = subproject('nx-thread-tls')
 nx_thread_tls_dep = nx_thread_tls_proj.get_variable('nx_thread_tls_dep')
 
 # Dependencies list
 deps = [
+    nx_svc_dep,
     nx_thread_tls_dep,
 ]
 
@@ -30,6 +35,7 @@ nx_thread_tgt = custom_target(
         '--profile', get_option('buildtype') == 'release' ? 'release' : 'dev',
         '--target-dir', meson.global_build_root() / 'cargo-target',
         '--artifact-dir', '@OUTDIR@',
+        '--features', 'ffi',
     ],
     output : ['libnx_thread.a', 'libnx_thread.rlib'],
     console: true,
