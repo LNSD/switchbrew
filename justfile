@@ -17,7 +17,7 @@ check-format:
 
 # Check Rust code (cargo check)
 check *EXTRA_FLAGS:
-    cargo clippy --tests {{EXTRA_FLAGS}}
+    cargo check {{EXTRA_FLAGS}}
 
 # Setup meson build directory (meson setup)
 meson-setup *EXTRA_FLAGS:

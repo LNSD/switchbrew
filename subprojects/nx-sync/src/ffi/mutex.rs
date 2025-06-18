@@ -74,4 +74,4 @@ pub unsafe extern "C" fn __nx_sync_mutex_unlock(mutex: *mut Mutex) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_mutex_is_locked_by_current_thread(mutex: *mut Mutex) -> bool {
     unsafe { &*mutex }.is_locked_by_current_thread()
-} 
+}

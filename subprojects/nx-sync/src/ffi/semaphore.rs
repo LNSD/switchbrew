@@ -67,4 +67,4 @@ pub unsafe extern "C" fn __nx_sync_semaphore_wait(sem: *mut Semaphore) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_semaphore_try_wait(sem: *mut Semaphore) -> bool {
     unsafe { &*sem }.try_wait()
-} 
+}

@@ -75,7 +75,6 @@ pub unsafe fn cntfrq_el0() -> u64 {
 ///
 /// - [ARM TPIDRRO_ELO Register](https://developer.arm.com/documentation/ddi0601/2024-12/AArch64-Registers/TPIDRRO-EL0--EL0-Read-Only-Software-Thread-ID-Register)
 /// - [rust-embedded/aarch64-cpu: tpidrro_el0.rs](https://github.com/rust-embedded/aarch64-cpu/blob/main/src/registers/tpidrro_el0.rs)
-///
 #[inline]
 pub unsafe fn tpidrro_el0() -> *mut c_void {
     let tls_ptr: *mut c_void;

@@ -1,7 +1,12 @@
+//! # nx-alloc
 #![no_std]
 
 mod ffi;
 pub mod llalloc;
+mod sync;
+
+#[cfg(feature = "global-allocator")]
+pub mod global;
 
 /// #[panic_handler]
 ///

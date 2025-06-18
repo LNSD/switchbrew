@@ -131,4 +131,4 @@ pub unsafe extern "C" fn __nx_sync_rwlock_is_write_lock_held_by_current_thread(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sync_rwlock_is_owned_by_current_thread(rw: *mut RwLock) -> bool {
     unsafe { &*rw }.is_owned_by_current_thread()
-} 
+}

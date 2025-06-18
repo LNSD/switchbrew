@@ -154,4 +154,4 @@ pub unsafe extern "C" fn __nx_sync_condvar_wake_one(condvar: *mut Condvar) -> Re
 pub unsafe extern "C" fn __nx_sync_condvar_wake_all(condvar: *mut Condvar) -> ResultCode {
     unsafe { &*condvar }.wake_all();
     0
-} 
+}

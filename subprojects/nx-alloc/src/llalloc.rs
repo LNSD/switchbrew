@@ -1,4 +1,4 @@
-use core::{alloc::{GlobalAlloc, Layout}, ffi::c_char, ptr};
+use core::{alloc::Layout, ffi::c_char, ptr};
 
 use linked_list_allocator::Heap;
 use nx_svc::{
@@ -6,7 +6,8 @@ use nx_svc::{
     mem::set_heap_size,
     misc::{get_total_memory_size, get_used_memory_size},
 };
-use nx_sync::mutex::Mutex;
+
+use crate::sync::Mutex;
 
 /// The allocator instance.
 pub static ALLOC: Mutex<LlAllocator> = Mutex::new(LlAllocator::new_uninit());
@@ -75,18 +76,4 @@ fn init_alloc_heap() -> Heap {
 
     // Safety: The kernel guarantees this region is valid and owned by us
     unsafe { Heap::new(heap_addr as *mut u8, heap_size) }
-}
-
-pub struct GlobalLlAllocator;
-
-unsafe impl GlobalAlloc for GlobalLlAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let mut alloc = ALLOC.lock();
-        unsafe { alloc.malloc(layout.size(), layout.align()) }
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        let mut alloc = ALLOC.lock();
-        unsafe { alloc.free(ptr, layout.size(), layout.align()) }
-    }
 }

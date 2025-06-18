@@ -10,6 +10,11 @@ test = false
 doctest = false
 bench = false
 
+[features]
+# Enable the global allocator feature to use the linked list allocator as the
+# global allocator.
+global-allocator = []
+
 [dependencies]
 linked_list_allocator = { version = "0.10.5", default-features = false }
 nx-svc = { version = "0.1.0", path = "../nx-svc" }

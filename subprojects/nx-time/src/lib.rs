@@ -109,7 +109,6 @@ use crate::common::{FromInner, IntoInner};
 /// [`elapsed`]: Instant::elapsed
 /// [`sub`]: Instant::sub
 /// [`checked_duration_since`]: Instant::checked_duration_since
-///
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Instant(sys::Instant);
 

@@ -31,7 +31,6 @@ use nx_cpu::control_regs;
 ///
 /// This function is safe to call, but dereferencing the returned pointer
 /// requires careful attention to the TLR memory layout.
-///
 #[inline]
 pub fn get_tlr_ptr() -> *mut c_void {
     unsafe { control_regs::tpidrro_el0() }

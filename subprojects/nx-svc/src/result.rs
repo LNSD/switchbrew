@@ -55,6 +55,7 @@ pub type ResultCode = u32;
 /// let err = Error::from_parts(ErrorModule::Kernel, 404);
 ///
 /// println!("{}", err); // "2001-0404"
+///
 /// # assert_eq!(format!("{}", err), "2001-0404");
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -116,7 +117,10 @@ impl core::fmt::Debug for Error {
     ///
     /// let error = Error::from_parts(ErrorModule::FS, 500);
     ///
-    /// assert_eq!(format!("{:?}", error), "Error { code: 2002-0500, module: FS, description: 500, raw: 0x20020500 }");
+    /// assert_eq!(
+    ///     format!("{:?}", error),
+    ///     "Error { code: 2002-0500, module: FS, description: 500, raw: 0x20020500 }"
+    /// );
     /// ```
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Error")
