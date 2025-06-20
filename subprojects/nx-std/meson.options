@@ -1,0 +1,55 @@
+option(
+    'use_nx_alloc',
+    type : 'feature', value : 'auto',
+    description : 'Enable the `alloc` feature',
+    yield : true
+)
+
+option(
+    'use_nx_rand',
+    type : 'feature', value : 'auto',
+    description : 'Enable the `rand` feature',
+    yield : true
+)
+
+option(
+    'use_nx_std_sync',
+    type : 'feature', value : 'auto',
+    description : 'Enable the `sync` feature',
+    yield : true
+)
+
+option(
+    'use_nx_svc',
+    type : 'feature', value : 'auto',
+    description : 'Enable the `svc` feature',
+    yield : true
+)
+
+option(
+    'use_nx_sync',
+    type : 'feature', value : 'auto',
+    description : 'Enable the `sys-sync` feature',
+    yield : true
+)
+
+option(
+    'use_nx_thread',
+    type : 'feature', value : 'auto',    
+    description : 'Enable the `thread` feature',
+    yield : true
+)
+
+option(
+    'use_nx_thread_tls',
+    type : 'feature', value : 'auto',
+    description : 'Enable the `sys-thread` feature',
+    yield : true
+)
+
+option(
+    'use_nx_time',
+    type : 'feature', value : 'auto',
+    description : 'Enable the `time` feature',
+    yield : true
+)

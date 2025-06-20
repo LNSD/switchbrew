@@ -1,0 +1,52 @@
+[package]
+name = "nx-std"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "nx_std"
+crate-type = ["rlib", "staticlib"]
+test = false
+doctest = false
+bench = false
+
+[features]
+# All non-sys features are enabled by default
+default = ["alloc", "rand", "sync", "thread", "time"]
+
+# Low-level features
+sys = ["svc", "sys-sync", "sys-thread"]
+
+# FFI overrides for libnx functions (only if the dependency is enabled)
+ffi = [
+    "nx-alloc?/ffi",
+    "nx-rand?/ffi",
+    "nx-std-sync?/ffi",
+    "nx-svc?/ffi",
+    "nx-sync?/ffi",
+    "nx-thread?/ffi",
+    "nx-thread-tls?/ffi",
+    "nx-time?/ffi",
+]
+
+# Dependency features
+alloc = ["dep:nx-alloc", "nx-alloc/global-allocator"]
+rand = ["dep:nx-rand"]
+sync = ["dep:nx-std-sync", "alloc"]
+svc = ["dep:nx-svc"]
+sys-sync = ["dep:nx-sync"]
+thread = ["dep:nx-thread"]
+sys-thread = ["dep:nx-thread-tls"]
+time = ["dep:nx-time"]
+
+[dependencies]
+nx-alloc = { version = "0.1.0", path = "../nx-alloc", optional = true }
+nx-rand = { version = "0.1.0", path = "../nx-rand", optional = true }
+nx-std-sync = { version = "0.1.0", path = "../nx-std-sync", optional = true }
+nx-svc = { version = "0.1.0", path = "../nx-svc", optional = true }
+nx-sync = { version = "0.1.0", path = "../nx-sync", optional = true }
+nx-thread = { version = "0.1.0", path = "../nx-thread", optional = true }
+nx-thread-tls = { version = "0.1.0", path = "../nx-thread-tls", optional = true }
+nx-time = { version = "0.1.0", path = "../nx-time", optional = true }
+panic-abort = "0.3.2"
+panic-halt = "1.0.0"

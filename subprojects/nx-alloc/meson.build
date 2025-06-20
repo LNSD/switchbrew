@@ -53,11 +53,14 @@ nx_alloc_tgt = custom_target(
     build_always_stale: true,
 )
 
+#------------------------------------------------
+# Dependency declaration
+#------------------------------------------------
+# Linker script for overriding libnx alloc functions
+nx_alloc_ld_override = meson.current_source_dir() / 'alloc_override.ld'
+
 nx_alloc_dep = declare_dependency(
     include_directories : inc,
     link_with : nx_alloc_tgt[0],
     dependencies : deps,
 )
-
-# Linker script override for alloc functions
-nx_alloc_ld_override = meson.current_source_dir() / 'alloc_override.ld' 

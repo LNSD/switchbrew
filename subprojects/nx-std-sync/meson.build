@@ -43,6 +43,9 @@ nx_std_sync_tgt = custom_target(
     build_always_stale: true,
 )
 
+#------------------------------------------------
+# Dependency declaration
+#------------------------------------------------
 nx_std_sync_dep = declare_dependency(
     include_directories : inc,
     link_with : nx_std_sync_tgt[0],

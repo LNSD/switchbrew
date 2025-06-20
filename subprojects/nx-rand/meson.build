@@ -38,11 +38,14 @@ nx_rand_tgt = custom_target(
     build_always_stale: true,
 )
 
+#------------------------------------------------
+# Dependency declaration
+#------------------------------------------------
+# Linker script for overriding libnx random functions
+nx_rand_ld_override = meson.current_source_dir() / 'rand_override.ld' 
+
 nx_rand_dep = declare_dependency(
     include_directories : inc,
     link_with : nx_rand_tgt[0],
     dependencies : deps,
 )
-
-# Linker script override for random functions
-nx_rand_ld_override = meson.current_source_dir() / 'rand_override.ld' 

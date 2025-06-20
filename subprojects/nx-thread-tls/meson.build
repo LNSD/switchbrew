@@ -38,10 +38,14 @@ nx_thread_tls_tgt = custom_target(
     build_always_stale: true,
 )
 
+#------------------------------------------------
+# Dependency declaration
+#------------------------------------------------
+# Linker script for overriding libnx thread-tls functions
+nx_thread_tls_ld_override = meson.current_source_dir() / 'thread_tls_redirect.ld'
+
 nx_thread_tls_dep = declare_dependency(
     include_directories : inc,
     link_with : nx_thread_tls_tgt[0],
     dependencies : deps,
 )
-# Linker script override for thread-tls functions
-nx_thread_tls_ld_override = meson.current_source_dir() / 'thread_tls_redirect.ld'
