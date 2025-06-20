@@ -1,11 +1,10 @@
 //! # nx-std-sync
 #![no_std]
 
+// The `alloc` crate enables memory allocation.
 extern crate alloc;
-
-/// Use the linked list allocator as the global allocator.
-#[global_allocator]
-static ALLOC: nx_alloc::GlobalLinkedListAllocator = nx_alloc::GlobalLinkedListAllocator;
+// The `nx-alloc` crate exposes the `#[global_allocator]` for the dependent crates.
+extern crate nx_alloc;
 
 #[cfg(feature = "ffi")]
 mod ffi;
