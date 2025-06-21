@@ -1,10 +1,11 @@
 #![no_std]
 
-#[cfg(feature = "ffi")]
-mod ffi;
+// The `alloc` crate enables memory allocation.
+extern crate alloc;
+// The `nx-alloc` crate exposes the `#[global_allocator]` for the dependent crates.
+extern crate nx_alloc;
 
-pub mod sleep;
-pub mod sys;
+pub mod vmm;
 
 /// #[panic_handler]
 ///

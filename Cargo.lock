@@ -79,6 +79,7 @@ dependencies = [
  "nx-std-sync",
  "nx-std-thread",
  "nx-svc",
+ "nx-sys-mem",
  "nx-sys-sync",
  "nx-sys-thread",
  "nx-time",
@@ -101,15 +102,10 @@ dependencies = [
 name = "nx-std-thread"
 version = "0.1.0"
 dependencies = [
- "intrusive-collections",
- "nx-alloc",
- "nx-rand",
- "nx-std-sync",
  "nx-svc",
  "nx-sys-thread",
  "panic-abort",
  "panic-halt",
- "static_assertions",
 ]
 
 [[package]]
@@ -119,6 +115,21 @@ dependencies = [
  "bitflags",
  "panic-abort",
  "panic-halt",
+ "thiserror",
+]
+
+[[package]]
+name = "nx-sys-mem"
+version = "0.1.0"
+dependencies = [
+ "intrusive-collections",
+ "nx-alloc",
+ "nx-rand",
+ "nx-std-sync",
+ "nx-svc",
+ "panic-abort",
+ "panic-halt",
+ "static_assertions",
  "thiserror",
 ]
 

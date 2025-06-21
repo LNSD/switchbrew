@@ -15,7 +15,7 @@ bench = false
 default = ["alloc", "rand", "sync", "thread", "time"]
 
 # Low-level features
-sys = ["svc", "sys-sync", "sys-thread"]
+sys = ["svc", "sys-mem", "sys-sync", "sys-thread"]
 
 # FFI overrides for libnx functions (only if the dependency is enabled)
 ffi = [
@@ -23,6 +23,7 @@ ffi = [
     "nx-rand?/ffi",
     "nx-std-sync?/ffi",
     "nx-svc?/ffi",
+    "nx-sys-mem?/ffi",
     "nx-sys-sync?/ffi",
     "nx-sys-thread?/ffi",
     "nx-std-thread?/ffi",
@@ -34,6 +35,7 @@ alloc = ["dep:nx-alloc", "nx-alloc/global-allocator"]
 rand = ["dep:nx-rand"]
 sync = ["dep:nx-std-sync", "alloc"]
 svc = ["dep:nx-svc"]
+sys-mem = ["dep:nx-sys-mem", "alloc"]
 sys-sync = ["dep:nx-sys-sync"]
 sys-thread = ["dep:nx-sys-thread"]
 thread = ["dep:nx-std-thread"]
@@ -44,6 +46,7 @@ nx-alloc = { version = "0.1.0", path = "../nx-alloc", optional = true }
 nx-rand = { version = "0.1.0", path = "../nx-rand", optional = true }
 nx-std-sync = { version = "0.1.0", path = "../nx-std-sync", optional = true }
 nx-svc = { version = "0.1.0", path = "../nx-svc", optional = true }
+nx-sys-mem = { version = "0.1.0", path = "../nx-sys-mem", optional = true }
 nx-sys-sync = { version = "0.1.0", path = "../nx-sys-sync", optional = true }
 nx-sys-thread = { version = "0.1.0", path = "../nx-sys-thread", optional = true }
 nx-std-thread = { version = "0.1.0", path = "../nx-std-thread", optional = true }
