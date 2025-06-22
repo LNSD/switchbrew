@@ -16,6 +16,7 @@ use crate::{
 /// The handle is invalid until the transfer memory object is created, after
 /// that it will remain valid until the object is closed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
 pub struct Handle(RawHandle);
 
 impl Handle {
@@ -27,6 +28,20 @@ impl Handle {
     /// Returns the raw handle value.
     pub fn raw(&self) -> RawHandle {
         self.0
+    }
+
+    /// Converts the [`Handle`] to a raw handle.
+    pub fn to_raw(&self) -> RawHandle {
+        self.0
+    }
+
+    /// Converts a raw handle to a [`Handle`].
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee that the raw handle is valid.
+    pub unsafe fn from_raw(raw: RawHandle) -> Self {
+        Self(raw)
     }
 }
 
@@ -46,14 +61,10 @@ pub fn create_transfer_memory(
     RawResult::from_raw(rc).map(Handle(handle), |rc| match rc.description() {
         desc if KError::InvalidSize == desc => CreateTransferMemoryError::InvalidSize,
         desc if KError::InvalidAddress == desc => CreateTransferMemoryError::InvalidAddress,
-        desc if KError::OutOfResource == desc => CreateTransferMemoryError::OutOfResource,
-        desc if KError::OutOfMemory == desc => CreateTransferMemoryError::OutOfMemory,
         desc if KError::InvalidNewMemoryPermission == desc => {
             CreateTransferMemoryError::InvalidPermission
         }
-        desc if KError::InvalidMemoryRegion == desc => {
-            CreateTransferMemoryError::InvalidMemoryRegion
-        }
+        desc if KError::InvalidCurrentMemory == desc => CreateTransferMemoryError::InvalidMemState,
         desc if KError::LimitReached == desc => CreateTransferMemoryError::LimitReached,
         _ => CreateTransferMemoryError::Unknown(rc.into()),
     })
@@ -73,8 +84,11 @@ pub fn map_transfer_memory(
         desc if KError::InvalidCurrentMemory == desc => {
             MapTransferMemoryError::InvalidCurrentMemory
         }
+        desc if KError::InvalidSize == desc => MapTransferMemoryError::InvalidSize,
         desc if KError::InvalidMemoryRegion == desc => MapTransferMemoryError::InvalidMemoryRegion,
-        desc if KError::OutOfResource == desc => MapTransferMemoryError::OutOfResource,
+        desc if KError::InvalidNewMemoryPermission == desc => {
+            MapTransferMemoryError::InvalidPermission
+        }
         _ => MapTransferMemoryError::Unknown(rc.into()),
     })
 }
@@ -92,6 +106,7 @@ pub fn unmap_transfer_memory(
         desc if KError::InvalidCurrentMemory == desc => {
             UnmapTransferMemoryError::InvalidCurrentMemory
         }
+        desc if KError::InvalidSize == desc => UnmapTransferMemoryError::InvalidSize,
         desc if KError::InvalidMemoryRegion == desc => {
             UnmapTransferMemoryError::InvalidMemoryRegion
         }
@@ -114,14 +129,10 @@ pub enum CreateTransferMemoryError {
     InvalidSize,
     #[error("Invalid address")]
     InvalidAddress,
-    #[error("Out of resource")]
-    OutOfResource,
-    #[error("Out of memory")]
-    OutOfMemory,
     #[error("Invalid permission")]
     InvalidPermission,
-    #[error("Invalid memory region")]
-    InvalidMemoryRegion,
+    #[error("Invalid memory state")]
+    InvalidMemState,
     #[error("Limit reached")]
     LimitReached,
     #[error("Unknown error: {0}")]
@@ -133,10 +144,8 @@ impl ToRawResultCode for CreateTransferMemoryError {
         match self {
             Self::InvalidSize => KError::InvalidSize.to_rc(),
             Self::InvalidAddress => KError::InvalidAddress.to_rc(),
-            Self::OutOfResource => KError::OutOfResource.to_rc(),
-            Self::OutOfMemory => KError::OutOfMemory.to_rc(),
             Self::InvalidPermission => KError::InvalidNewMemoryPermission.to_rc(),
-            Self::InvalidMemoryRegion => KError::InvalidMemoryRegion.to_rc(),
+            Self::InvalidMemState => KError::InvalidCurrentMemory.to_rc(),
             Self::LimitReached => KError::LimitReached.to_rc(),
             Self::Unknown(err) => err.to_raw(),
         }
@@ -149,12 +158,14 @@ pub enum MapTransferMemoryError {
     InvalidHandle,
     #[error("Invalid address")]
     InvalidAddress,
+    #[error("Invalid size")]
+    InvalidSize,
     #[error("Invalid memory state")]
     InvalidCurrentMemory,
     #[error("Invalid memory region")]
     InvalidMemoryRegion,
-    #[error("Out of resource")]
-    OutOfResource,
+    #[error("Invalid permission")]
+    InvalidPermission,
     #[error("Unknown error: {0}")]
     Unknown(Error),
 }
@@ -164,9 +175,10 @@ impl ToRawResultCode for MapTransferMemoryError {
         match self {
             Self::InvalidHandle => KError::InvalidHandle.to_rc(),
             Self::InvalidAddress => KError::InvalidAddress.to_rc(),
+            Self::InvalidSize => KError::InvalidSize.to_rc(),
             Self::InvalidCurrentMemory => KError::InvalidCurrentMemory.to_rc(),
             Self::InvalidMemoryRegion => KError::InvalidMemoryRegion.to_rc(),
-            Self::OutOfResource => KError::OutOfResource.to_rc(),
+            Self::InvalidPermission => KError::InvalidNewMemoryPermission.to_rc(),
             Self::Unknown(err) => err.to_raw(),
         }
     }
@@ -178,6 +190,8 @@ pub enum UnmapTransferMemoryError {
     InvalidHandle,
     #[error("Invalid address")]
     InvalidAddress,
+    #[error("Invalid size")]
+    InvalidSize,
     #[error("Invalid memory state")]
     InvalidCurrentMemory,
     #[error("Invalid memory region")]
@@ -191,6 +205,7 @@ impl ToRawResultCode for UnmapTransferMemoryError {
         match self {
             Self::InvalidHandle => KError::InvalidHandle.to_rc(),
             Self::InvalidAddress => KError::InvalidAddress.to_rc(),
+            Self::InvalidSize => KError::InvalidSize.to_rc(),
             Self::InvalidCurrentMemory => KError::InvalidCurrentMemory.to_rc(),
             Self::InvalidMemoryRegion => KError::InvalidMemoryRegion.to_rc(),
             Self::Unknown(err) => err.to_raw(),

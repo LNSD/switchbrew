@@ -16,12 +16,27 @@ use crate::{
 /// The handle is invalid until the shared memory object is created, after
 /// that it will remain valid until the shared memory object is closed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
 pub struct Handle(RawHandle);
 
 impl Handle {
     /// Returns `true` if the handle is valid.
     pub fn is_valid(&self) -> bool {
         self.0 != INVALID_HANDLE
+    }
+
+    /// Converts the [`Handle`] to a raw handle.
+    pub fn to_raw(&self) -> RawHandle {
+        self.0
+    }
+
+    /// Converts a raw handle to a [`Handle`].
+    ///
+    /// # Safety
+    ///
+    /// Caller must guarantee that the raw handle is valid.
+    pub unsafe fn from_raw(raw: RawHandle) -> Self {
+        Self(raw)
     }
 }
 
@@ -37,13 +52,7 @@ pub fn create_shared_memory(
     let rc = unsafe { raw::create_shared_memory(&mut handle, size, local_perm, remote_perm) };
 
     RawResult::from_raw(rc).map(Handle(handle), |rc| match rc.description() {
-        desc if KError::InvalidSize == desc => CreateSharedMemoryError::InvalidSize,
-        desc if KError::OutOfResource == desc => CreateSharedMemoryError::OutOfResource,
         desc if KError::OutOfMemory == desc => CreateSharedMemoryError::OutOfMemory,
-        desc if KError::InvalidNewMemoryPermission == desc => {
-            CreateSharedMemoryError::InvalidPermission
-        }
-        desc if KError::InvalidMemoryRegion == desc => CreateSharedMemoryError::InvalidMemoryRegion,
         desc if KError::LimitReached == desc => CreateSharedMemoryError::LimitReached,
         _ => CreateSharedMemoryError::Unknown(rc.into()),
     })
@@ -62,7 +71,12 @@ pub fn map_shared_memory(
         desc if KError::InvalidAddress == desc => MapSharedMemoryError::InvalidAddress,
         desc if KError::InvalidCurrentMemory == desc => MapSharedMemoryError::InvalidCurrentMemory,
         desc if KError::InvalidMemoryRegion == desc => MapSharedMemoryError::InvalidMemoryRegion,
+        desc if KError::InvalidSize == desc => MapSharedMemoryError::InvalidSize,
+        desc if KError::InvalidNewMemoryPermission == desc => {
+            MapSharedMemoryError::InvalidPermission
+        }
         desc if KError::OutOfResource == desc => MapSharedMemoryError::OutOfResource,
+        desc if KError::OutOfMemory == desc => MapSharedMemoryError::OutOfMemory,
         _ => MapSharedMemoryError::Unknown(rc.into()),
     })
 }
@@ -75,12 +89,12 @@ pub fn unmap_shared_memory(
 ) -> Result<(), UnmapSharedMemoryError> {
     let rc = unsafe { raw::unmap_shared_memory(handle.0, addr, size) };
     RawResult::from_raw(rc).map((), |rc| match rc.description() {
-        desc if KError::InvalidHandle == desc => UnmapSharedMemoryError::InvalidHandle,
-        desc if KError::InvalidAddress == desc => UnmapSharedMemoryError::InvalidAddress,
         desc if KError::InvalidCurrentMemory == desc => {
             UnmapSharedMemoryError::InvalidCurrentMemory
         }
-        desc if KError::InvalidMemoryRegion == desc => UnmapSharedMemoryError::InvalidMemoryRegion,
+        desc if KError::InvalidSize == desc => UnmapSharedMemoryError::InvalidSize,
+        desc if KError::InvalidMemoryRegion == desc => UnmapSharedMemoryError::InvalidMemoryRange,
+        desc if KError::OutOfResource == desc => UnmapSharedMemoryError::OutOfResource,
         _ => UnmapSharedMemoryError::Unknown(rc.into()),
     })
 }
@@ -96,16 +110,8 @@ pub fn close_handle(handle: Handle) -> Result<(), CloseHandleError> {
 
 #[derive(Debug, thiserror::Error)]
 pub enum CreateSharedMemoryError {
-    #[error("Invalid size")]
-    InvalidSize,
-    #[error("Out of resource")]
-    OutOfResource,
     #[error("Out of memory")]
     OutOfMemory,
-    #[error("Invalid permission")]
-    InvalidPermission,
-    #[error("Invalid memory region")]
-    InvalidMemoryRegion,
     #[error("Limit reached")]
     LimitReached,
     #[error("Unknown error: {0}")]
@@ -115,11 +121,7 @@ pub enum CreateSharedMemoryError {
 impl ToRawResultCode for CreateSharedMemoryError {
     fn to_rc(self) -> ResultCode {
         match self {
-            Self::InvalidSize => KError::InvalidSize.to_rc(),
-            Self::OutOfResource => KError::OutOfResource.to_rc(),
             Self::OutOfMemory => KError::OutOfMemory.to_rc(),
-            Self::InvalidPermission => KError::InvalidNewMemoryPermission.to_rc(),
-            Self::InvalidMemoryRegion => KError::InvalidMemoryRegion.to_rc(),
             Self::LimitReached => KError::LimitReached.to_rc(),
             Self::Unknown(err) => err.to_raw(),
         }
@@ -136,8 +138,14 @@ pub enum MapSharedMemoryError {
     InvalidCurrentMemory,
     #[error("Invalid memory region")]
     InvalidMemoryRegion,
+    #[error("Invalid size")]
+    InvalidSize,
+    #[error("Invalid permission")]
+    InvalidPermission,
     #[error("Out of resource")]
     OutOfResource,
+    #[error("Out of memory")]
+    OutOfMemory,
     #[error("Unknown error: {0}")]
     Unknown(Error),
 }
@@ -149,7 +157,10 @@ impl ToRawResultCode for MapSharedMemoryError {
             Self::InvalidAddress => KError::InvalidAddress.to_rc(),
             Self::InvalidCurrentMemory => KError::InvalidCurrentMemory.to_rc(),
             Self::InvalidMemoryRegion => KError::InvalidMemoryRegion.to_rc(),
+            Self::InvalidSize => KError::InvalidSize.to_rc(),
+            Self::InvalidPermission => KError::InvalidNewMemoryPermission.to_rc(),
             Self::OutOfResource => KError::OutOfResource.to_rc(),
+            Self::OutOfMemory => KError::OutOfMemory.to_rc(),
             Self::Unknown(err) => err.to_raw(),
         }
     }
@@ -157,14 +168,14 @@ impl ToRawResultCode for MapSharedMemoryError {
 
 #[derive(Debug, thiserror::Error)]
 pub enum UnmapSharedMemoryError {
-    #[error("Invalid handle")]
-    InvalidHandle,
-    #[error("Invalid address")]
-    InvalidAddress,
     #[error("Invalid memory state")]
     InvalidCurrentMemory,
-    #[error("Invalid memory region")]
-    InvalidMemoryRegion,
+    #[error("Invalid size")]
+    InvalidSize,
+    #[error("Invalid memory range")]
+    InvalidMemoryRange,
+    #[error("Out of resource")]
+    OutOfResource,
     #[error("Unknown error: {0}")]
     Unknown(Error),
 }
@@ -172,10 +183,10 @@ pub enum UnmapSharedMemoryError {
 impl ToRawResultCode for UnmapSharedMemoryError {
     fn to_rc(self) -> ResultCode {
         match self {
-            Self::InvalidHandle => KError::InvalidHandle.to_rc(),
-            Self::InvalidAddress => KError::InvalidAddress.to_rc(),
             Self::InvalidCurrentMemory => KError::InvalidCurrentMemory.to_rc(),
-            Self::InvalidMemoryRegion => KError::InvalidMemoryRegion.to_rc(),
+            Self::InvalidSize => KError::InvalidSize.to_rc(),
+            Self::InvalidMemoryRange => KError::InvalidMemoryRegion.to_rc(),
+            Self::OutOfResource => KError::OutOfResource.to_rc(),
             Self::Unknown(err) => err.to_raw(),
         }
     }

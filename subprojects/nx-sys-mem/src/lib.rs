@@ -5,6 +5,8 @@ extern crate alloc;
 // The `nx-alloc` crate exposes the `#[global_allocator]` for the dependent crates.
 extern crate nx_alloc;
 
+pub mod shmem;
+pub mod tmem;
 pub mod vmm;
 
 /// #[panic_handler]

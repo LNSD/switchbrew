@@ -20,3 +20,37 @@ virtmemRemoveReservation = __nx_virtmem_remove_reservation;
 
 EXTERN(__nx_virtmem_setup);
 virtmemSetup = __nx_virtmem_setup;
+
+/* Shared Memory (Shmem) */
+EXTERN(__nx_shmem_create);
+EXTERN(__nx_shmem_load_remote);
+EXTERN(__nx_shmem_map);
+EXTERN(__nx_shmem_unmap);
+EXTERN(__nx_shmem_get_addr);
+EXTERN(__nx_shmem_close);
+
+shmemCreate     = __nx_shmem_create;
+shmemLoadRemote = __nx_shmem_load_remote;
+shmemMap        = __nx_shmem_map;
+shmemUnmap      = __nx_shmem_unmap;
+shmemGetAddr    = __nx_shmem_get_addr;
+shmemClose      = __nx_shmem_close;
+
+/* Transfer Memory (Tmem) */
+EXTERN(__nx_tmem_create);
+EXTERN(__nx_tmem_create_from_memory);
+EXTERN(__nx_tmem_load_remote);
+EXTERN(__nx_tmem_map);
+EXTERN(__nx_tmem_unmap);
+EXTERN(__nx_tmem_close_handle);
+EXTERN(__nx_tmem_wait_for_permission);
+EXTERN(__nx_tmem_close);
+
+tmemCreate            = __nx_tmem_create;
+tmemCreateFromMemory  = __nx_tmem_create_from_memory;
+tmemLoadRemote        = __nx_tmem_load_remote;
+tmemMap               = __nx_tmem_map;
+tmemUnmap             = __nx_tmem_unmap;
+tmemCloseHandle       = __nx_tmem_close_handle;
+tmemWaitForPermission = __nx_tmem_wait_for_permission;
+tmemClose             = __nx_tmem_close;
