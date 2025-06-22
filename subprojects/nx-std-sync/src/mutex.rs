@@ -168,6 +168,12 @@ impl<T: ?Sized> Mutex<T> {
     pub fn data_ptr(&self) -> *mut T {
         self.data.get()
     }
+
+    /// Checks if the mutex is currently held by the calling thread.
+    #[inline]
+    pub fn is_locked_by_current_thread(&self) -> bool {
+        self.inner.is_locked_by_current_thread()
+    }
 }
 
 impl<T> From<T> for Mutex<T> {

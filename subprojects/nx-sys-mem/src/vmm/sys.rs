@@ -17,7 +17,7 @@ use nx_svc::{
 };
 
 /// Global virtual memory manager
-static VMM: Mutex<VirtmemManager> = Mutex::new(VirtmemManager::new_uninit());
+pub(super) static VMM: Mutex<VirtmemManager> = Mutex::new(VirtmemManager::new_uninit());
 
 /// Lock the virtual memory manager
 ///
