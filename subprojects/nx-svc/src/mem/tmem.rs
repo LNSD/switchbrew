@@ -7,42 +7,13 @@ use core::ffi::c_void;
 
 use crate::{
     error::{KernelError as KError, ToRawResultCode},
-    raw::{self, Handle as RawHandle, INVALID_HANDLE},
+    raw,
     result::{Error, ResultCode, raw::Result as RawResult},
 };
 
-/// A handle to a transfer memory kernel object.
-///
-/// The handle is invalid until the transfer memory object is created, after
-/// that it will remain valid until the object is closed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(transparent)]
-pub struct Handle(RawHandle);
-
-impl Handle {
-    /// Returns `true` if the handle is valid.
-    pub fn is_valid(&self) -> bool {
-        self.0 != INVALID_HANDLE
-    }
-
-    /// Returns the raw handle value.
-    pub fn raw(&self) -> RawHandle {
-        self.0
-    }
-
-    /// Converts the [`Handle`] to a raw handle.
-    pub fn to_raw(&self) -> RawHandle {
-        self.0
-    }
-
-    /// Converts a raw handle to a [`Handle`].
-    ///
-    /// # Safety
-    ///
-    /// Caller must guarantee that the raw handle is valid.
-    pub unsafe fn from_raw(raw: RawHandle) -> Self {
-        Self(raw)
-    }
+define_handle_type! {
+    /// A handle to a transfer memory kernel object.
+    pub struct Handle
 }
 
 /// Creates a transfer memory kernel object from an existing memory region.
@@ -55,7 +26,7 @@ pub fn create_transfer_memory(
     size: usize,
     perm: u32,
 ) -> Result<Handle, CreateTransferMemoryError> {
-    let mut handle: RawHandle = INVALID_HANDLE;
+    let mut handle: raw::Handle = raw::INVALID_HANDLE;
     let rc = unsafe { raw::create_transfer_memory(&mut handle, addr, size, perm) };
 
     RawResult::from_raw(rc).map(Handle(handle), |rc| match rc.description() {

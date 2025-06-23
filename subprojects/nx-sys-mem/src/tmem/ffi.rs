@@ -50,7 +50,7 @@ unsafe extern "C" fn __nx_tmem_create(t: *mut TransferMemory, size: usize, perm:
     match unsafe { sys::create(size, perm as Permission) } {
         Ok(tm) => {
             let tm_ref = unsafe { &mut *t };
-            tm_ref.handle = tm.handle().raw();
+            tm_ref.handle = tm.handle().to_raw();
             tm_ref.size = tm.size();
             tm_ref.perm = tm.perm() as u32;
             tm_ref.map_addr = ptr::null_mut();
@@ -82,7 +82,7 @@ unsafe extern "C" fn __nx_tmem_create_from_memory(
     match unsafe { sys::create_from_memory(buf, size, perm as Permission) } {
         Ok(tm) => {
             let tm_ref = unsafe { &mut *t };
-            tm_ref.handle = tm.handle().raw();
+            tm_ref.handle = tm.handle().to_raw();
             tm_ref.size = tm.size();
             tm_ref.perm = tm.perm() as u32;
             tm_ref.map_addr = ptr::null_mut();

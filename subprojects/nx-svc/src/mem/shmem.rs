@@ -7,37 +7,13 @@ use core::ffi::c_void;
 
 use crate::{
     error::{KernelError as KError, ToRawResultCode},
-    raw::{self, Handle as RawHandle, INVALID_HANDLE},
+    raw,
     result::{Error, ResultCode, raw::Result as RawResult},
 };
 
-/// A handle to a shared memory kernel object.
-///
-/// The handle is invalid until the shared memory object is created, after
-/// that it will remain valid until the shared memory object is closed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(transparent)]
-pub struct Handle(RawHandle);
-
-impl Handle {
-    /// Returns `true` if the handle is valid.
-    pub fn is_valid(&self) -> bool {
-        self.0 != INVALID_HANDLE
-    }
-
-    /// Converts the [`Handle`] to a raw handle.
-    pub fn to_raw(&self) -> RawHandle {
-        self.0
-    }
-
-    /// Converts a raw handle to a [`Handle`].
-    ///
-    /// # Safety
-    ///
-    /// Caller must guarantee that the raw handle is valid.
-    pub unsafe fn from_raw(raw: RawHandle) -> Self {
-        Self(raw)
-    }
+define_handle_type! {
+    /// A handle to a shared memory kernel object.
+    pub struct Handle
 }
 
 /// Creates a shared memory kernel object.
@@ -48,7 +24,7 @@ pub fn create_shared_memory(
     local_perm: u32,
     remote_perm: u32,
 ) -> Result<Handle, CreateSharedMemoryError> {
-    let mut handle: RawHandle = INVALID_HANDLE;
+    let mut handle: raw::Handle = raw::INVALID_HANDLE;
     let rc = unsafe { raw::create_shared_memory(&mut handle, size, local_perm, remote_perm) };
 
     RawResult::from_raw(rc).map(Handle(handle), |rc| match rc.description() {
@@ -56,6 +32,26 @@ pub fn create_shared_memory(
         desc if KError::LimitReached == desc => CreateSharedMemoryError::LimitReached,
         _ => CreateSharedMemoryError::Unknown(rc.into()),
     })
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum CreateSharedMemoryError {
+    #[error("Out of memory")]
+    OutOfMemory,
+    #[error("Limit reached")]
+    LimitReached,
+    #[error("Unknown error: {0}")]
+    Unknown(Error),
+}
+
+impl ToRawResultCode for CreateSharedMemoryError {
+    fn to_rc(self) -> ResultCode {
+        match self {
+            Self::OutOfMemory => KError::OutOfMemory.to_rc(),
+            Self::LimitReached => KError::LimitReached.to_rc(),
+            Self::Unknown(err) => err.to_raw(),
+        }
+    }
 }
 
 /// Maps a shared memory object into the current process.
@@ -79,53 +75,6 @@ pub fn map_shared_memory(
         desc if KError::OutOfMemory == desc => MapSharedMemoryError::OutOfMemory,
         _ => MapSharedMemoryError::Unknown(rc.into()),
     })
-}
-
-/// Unmaps a previously mapped shared memory kernel object.
-pub fn unmap_shared_memory(
-    handle: Handle,
-    addr: *mut c_void,
-    size: usize,
-) -> Result<(), UnmapSharedMemoryError> {
-    let rc = unsafe { raw::unmap_shared_memory(handle.0, addr, size) };
-    RawResult::from_raw(rc).map((), |rc| match rc.description() {
-        desc if KError::InvalidCurrentMemory == desc => {
-            UnmapSharedMemoryError::InvalidCurrentMemory
-        }
-        desc if KError::InvalidSize == desc => UnmapSharedMemoryError::InvalidSize,
-        desc if KError::InvalidMemoryRegion == desc => UnmapSharedMemoryError::InvalidMemoryRange,
-        desc if KError::OutOfResource == desc => UnmapSharedMemoryError::OutOfResource,
-        _ => UnmapSharedMemoryError::Unknown(rc.into()),
-    })
-}
-
-/// Closes a shared memory kernel object handle.
-pub fn close_handle(handle: Handle) -> Result<(), CloseHandleError> {
-    let rc = unsafe { raw::close_handle(handle.0) };
-    RawResult::from_raw(rc).map((), |rc| match rc.description() {
-        desc if KError::InvalidHandle == desc => CloseHandleError::InvalidHandle,
-        _ => CloseHandleError::Unknown(rc.into()),
-    })
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum CreateSharedMemoryError {
-    #[error("Out of memory")]
-    OutOfMemory,
-    #[error("Limit reached")]
-    LimitReached,
-    #[error("Unknown error: {0}")]
-    Unknown(Error),
-}
-
-impl ToRawResultCode for CreateSharedMemoryError {
-    fn to_rc(self) -> ResultCode {
-        match self {
-            Self::OutOfMemory => KError::OutOfMemory.to_rc(),
-            Self::LimitReached => KError::LimitReached.to_rc(),
-            Self::Unknown(err) => err.to_raw(),
-        }
-    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -166,6 +115,24 @@ impl ToRawResultCode for MapSharedMemoryError {
     }
 }
 
+/// Unmaps a previously mapped shared memory kernel object.
+pub fn unmap_shared_memory(
+    handle: Handle,
+    addr: *mut c_void,
+    size: usize,
+) -> Result<(), UnmapSharedMemoryError> {
+    let rc = unsafe { raw::unmap_shared_memory(handle.0, addr, size) };
+    RawResult::from_raw(rc).map((), |rc| match rc.description() {
+        desc if KError::InvalidCurrentMemory == desc => {
+            UnmapSharedMemoryError::InvalidCurrentMemory
+        }
+        desc if KError::InvalidSize == desc => UnmapSharedMemoryError::InvalidSize,
+        desc if KError::InvalidMemoryRegion == desc => UnmapSharedMemoryError::InvalidMemoryRange,
+        desc if KError::OutOfResource == desc => UnmapSharedMemoryError::OutOfResource,
+        _ => UnmapSharedMemoryError::Unknown(rc.into()),
+    })
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum UnmapSharedMemoryError {
     #[error("Invalid memory state")]
@@ -190,6 +157,15 @@ impl ToRawResultCode for UnmapSharedMemoryError {
             Self::Unknown(err) => err.to_raw(),
         }
     }
+}
+
+/// Closes a shared memory kernel object handle.
+pub fn close_handle(handle: Handle) -> Result<(), CloseHandleError> {
+    let rc = unsafe { raw::close_handle(handle.0) };
+    RawResult::from_raw(rc).map((), |rc| match rc.description() {
+        desc if KError::InvalidHandle == desc => CloseHandleError::InvalidHandle,
+        _ => CloseHandleError::Unknown(rc.into()),
+    })
 }
 
 #[derive(Debug, thiserror::Error)]
