@@ -6,6 +6,7 @@ extern crate alloc;
 extern crate nx_alloc;
 
 pub mod shmem;
+pub mod stack;
 pub mod tmem;
 pub mod vmm;
 

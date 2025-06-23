@@ -195,10 +195,87 @@ impl ToRawResultCode for QueryMemoryError {
     }
 }
 
+/// Maps a memory range.
+///
+/// This function is used to map a memory range.
+///
+/// # Arguments
+///
+/// * `dst_addr` - The destination address
+/// * `src_addr` - The source address
+/// * `size` - The size of the memory range to map
+///
+/// Returns `Ok(())` if the memory was successfully mapped, or a [`MapMemoryError`] on failure.
+pub fn map_memory(
+    dst_addr: *mut c_void,
+    src_addr: *mut c_void,
+    size: usize,
+) -> Result<(), MapMemoryError> {
+    let rc = unsafe { raw::map_memory(dst_addr, src_addr, size) };
+    RawResult::from_raw(rc).map((), |rc| match rc.description() {
+        desc if KError::InvalidAddress == desc => MapMemoryError::InvalidAddress,
+        desc if KError::InvalidSize == desc => MapMemoryError::InvalidSize,
+        desc if KError::InvalidCurrentMemory == desc => MapMemoryError::InvalidCurrentMemory,
+        desc if KError::InvalidMemoryRegion == desc => MapMemoryError::InvalidMemoryRegion,
+        _ => MapMemoryError::Unknown(rc.into()),
+    })
+}
+
+/// Error type for map_memory operations.
+#[derive(Debug, thiserror::Error)]
+pub enum MapMemoryError {
+    /// The memory address is invalid or not properly aligned.
+    ///
+    /// This occurs when either the source or destination address is not aligned to 4KB,
+    /// or when the address range would cause an overflow.
+    #[error("Invalid address")]
+    InvalidAddress,
+
+    /// The size parameter is invalid.
+    ///
+    /// This occurs when:
+    /// - The size is 0
+    /// - The size is not aligned to 4KB
+    #[error("Invalid size")]
+    InvalidSize,
+
+    /// The memory state is invalid for the operation.
+    ///
+    /// This occurs when:
+    /// - The source address range is not within the process's address space
+    /// - The address range would cause an overflow (address + size <= address)
+    /// - The memory region is not in a valid state for mapping
+    #[error("Invalid memory state")]
+    InvalidCurrentMemory,
+
+    /// The memory range is invalid for the operation.
+    ///
+    /// This occurs when:
+    /// - The destination is outside the stack/alias region
+    /// - The mapping violates region constraints enforced by the kernel
+    #[error("Invalid memory range")]
+    InvalidMemoryRegion,
+
+    /// An unknown error occurred
+    #[error("Unknown error: {0}")]
+    Unknown(Error),
+}
+
+impl ToRawResultCode for MapMemoryError {
+    fn to_rc(self) -> ResultCode {
+        match self {
+            MapMemoryError::InvalidAddress => KError::InvalidAddress.to_rc(),
+            MapMemoryError::InvalidSize => KError::InvalidSize.to_rc(),
+            MapMemoryError::InvalidCurrentMemory => KError::InvalidCurrentMemory.to_rc(),
+            MapMemoryError::InvalidMemoryRegion => KError::InvalidMemoryRegion.to_rc(),
+            MapMemoryError::Unknown(err) => err.to_raw(),
+        }
+    }
+}
+
 /// Unmaps a memory range.
 ///
 /// This function is used to unmap a previously mapped memory range.
-/// It's commonly used in legacy kernel detection code.
 ///
 /// # Arguments
 ///
