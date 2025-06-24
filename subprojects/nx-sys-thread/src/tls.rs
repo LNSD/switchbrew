@@ -1,4 +1,4 @@
-//! Thread-Local Storage (TLS)
+//! # Thread-Local Storage (TLS)
 //!
 //! The thread-local region (TLR) is a 0x200-byte area.
 //!
@@ -8,6 +8,80 @@
 //!
 //! In threads created by the Nintendo SDK, `tpidr_el0` is assigned to the `ThreadPointer` object
 //! from the thread-local region.
+//!
+//! ## TLS layout overview
+//! The **complete** 0x200-byte block, including the ABI-mandated *Thread-Control
+//! Block* (TCB), looks like this:
+//!
+//! ```text
+//! TLS base (TPIDRRO_EL0)
+//! 0x000  ┌────────────────────────────┐
+//!        │ Thread-Control Block (TCB) │ 16 Bytes
+//! 0x010  ├────────────────────────────┤
+//!        │  .tdata / .tbss            │ ← Compiler-generated static TLS
+//! 0x108  ├────────────────────────────┤  ╮  
+//!        │  Dynamic TLS *slots*       │  │  
+//! 0x1E0  ├────────────────────────────┤  ├  User TLS region
+//!        │  ThreadVars  (32 bytes)    │  │
+//! 0x200  └────────────────────────────┘  ╯
+//! ```
+//!
+//! The first 16 bytes satisfy the AArch64 TLS ABI so that compiler-generated
+//! accesses to `__aarch64_read_tp()` work, while the final 32 bytes are reserved
+//! for `ThreadVars`. Everything in between is available for user and linker-
+//! provided TLS data.
+//!
+//! ### User TLS region
+//! From TLS base + 0x108 onward the block belongs entirely to user-mode code.
+//! The layout is:
+//!
+//! ```text
+//! TLS base (TPIDRRO_EL0) + 0x108
+//! 0x108  ┌────────────────────────────┐
+//!        │ Slot 0  (*mut c_void)      │ 8 Bytes
+//! 0x110  ├────────────────────────────┤
+//!        │ Slot 1  (*mut c_void)      │ 8 Bytes
+//! 0x118  ├────────────────────────────┤
+//!        ┆             …              ┆
+//! 0x1D0  ├────────────────────────────┤
+//!        │ Slot 25 (*mut c_void)      │ 8 Bytes
+//! 0x1D8  ├────────────────────────────┤
+//!        │ Slot 26 (*mut c_void)      │ 8 Bytes
+//! 0x1E0  ╞════════════════════════════╡
+//!        │ ThreadVars (0x20 bytes)    │
+//! 0x200  └────────────────────────────┘
+//! ```
+//!
+//! #### Dynamic TLS slots (`0x108` – `0x1DF`)
+//!
+//! Array of runtime-allocated pointers used by libnx to implement thread-local
+//! storage that is *not* known at link-time (e.g. `pthread_key_create`, C
+//! locale, etc.).  Each thread has its own copy; slot IDs are process-global.
+//!
+//! * 27 entries (`NUM_TLS_SLOTS`) of pointer-sized storage. Each slot can be
+//!   claimed at runtime with `threadTlsAlloc()`/`threadTlsSet()` (see libnx C
+//!   API) or—on the Rust side—via higher-level wrappers.
+//! * A process-global bitmask tracks which slot IDs are in use; an optional
+//!   *destructor* function may be registered so that per-thread cleanup runs
+//!   automatically when the thread exits (`threadExit`).
+//! * Access is purely arithmetic: `TPIDRRO_EL0 + 0x108 + slot_id *
+//!   size_of::<*mut c_void>()`, no syscalls needed.
+//! * Each entry is pointer-sized, so it can hold any `*mut T` or small integral
+//!   value cast to `usize`.
+//!
+//! #### ThreadVars (`0x1E0` – `0x200`)
+//!
+//! A fixed 32-byte footer holding per-thread metadata that libnx needs
+//! constantly: a *magic* value, the thread's kernel handle, a link to the
+//! rust/C thread object, a pointer to the newlib re-entrancy state and a cached
+//! copy of the thread-pointer (TP) value.
+////!
+//! Inside *ThreadVars* (offsets from 0x1E0):
+//!   ├── 0x00  magic (u32)
+//!   ├── 0x04  handle (u32)
+//!   ├── 0x08  thread_ptr (*mut c_void)
+//!   ├── 0x10  reent (*mut c_void)
+//!   └── 0x18  tls_tp (*mut c_void)
 //!
 //! ## References
 //! - [Switchbrew Wiki: Thread Local Region](https://switchbrew.org/wiki/Thread_Local_Region)
@@ -22,7 +96,7 @@ use nx_svc::thread::Handle;
 pub const TLS_SIZE: usize = 0x200;
 
 /// Start of the user-mode TLS region.
-pub const USER_TLS_BEGIN: usize = 0x100;
+pub const USER_TLS_BEGIN: usize = 0x108;
 
 /// End of the user-mode TLS region.
 pub const USER_TLS_END: usize = TLS_SIZE - THREAD_VARS_SIZE;
@@ -162,7 +236,7 @@ pub fn get_current_thread_handle() -> Handle {
 /// pointer-sized fields (16 bytes on AArch64).  
 ///
 /// The actual thread–local data must be placed after this TCB, but it might also require a stricter
-/// alignment as communicated by the linker via the [`__tls_align`] symbol.  At runtime we therefore
+/// alignment as communicated by the linker via the [`__tls_align`] symbol. At runtime we therefore
 /// take the maximum of the natural TCB size and the linker-supplied alignment value.
 #[inline]
 pub fn start_offset() -> usize {
