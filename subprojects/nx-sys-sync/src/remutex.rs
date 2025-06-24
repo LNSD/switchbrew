@@ -34,9 +34,9 @@ use nx_svc::{
     debug::BreakReason,
     raw::{Handle, INVALID_HANDLE},
 };
-use nx_sys_thread::tls;
 
 use super::mutex::Mutex;
+use crate::tls;
 
 /// A reentrant mutual exclusion primitive useful for protecting shared data.
 ///
@@ -72,7 +72,7 @@ impl ReentrantMutex {
     /// If the mutex is already locked by the current thread, the lock count is incremented.
     /// If the mutex is locked by another thread, this function will block until the mutex is released.
     pub fn lock(&self) {
-        let current_thread_handle = tls::get_current_thread_handle().to_raw();
+        let current_thread_handle = get_curr_thread_handle();
         let thread_tag = unsafe { *self.thread_tag.get() };
 
         if thread_tag != current_thread_handle {
@@ -91,7 +91,7 @@ impl ReentrantMutex {
     /// If the mutex is locked by another thread, this function returns `false` immediately.
     /// If the mutex is unlocked, it becomes locked by the current thread, and `true` is returned.
     pub fn try_lock(&self) -> bool {
-        let current_thread_handle = tls::get_current_thread_handle().to_raw();
+        let current_thread_handle = get_curr_thread_handle();
         let thread_tag = unsafe { *self.thread_tag.get() };
 
         if thread_tag != current_thread_handle {
@@ -115,7 +115,7 @@ impl ReentrantMutex {
     ///
     /// This function will panic if it is called by a thread that has not locked the mutex.
     pub fn unlock(&self) {
-        let current_thread_handle = tls::get_current_thread_handle();
+        let current_thread_handle = get_curr_thread_handle();
         let thread_tag = unsafe { *self.thread_tag.get() };
 
         if thread_tag != current_thread_handle {
@@ -134,4 +134,10 @@ impl ReentrantMutex {
             self.mutex.unlock();
         }
     }
+}
+
+/// Get the current thread's kernel handle.
+#[inline(always)]
+fn get_curr_thread_handle() -> Handle {
+    tls::get_current_thread_handle().to_raw()
 }

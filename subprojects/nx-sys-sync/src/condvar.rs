@@ -11,9 +11,9 @@ use nx_svc::{
     result::ResultCode,
     sync::{WaitProcessWideKeyError, signal_process_wide_key, wait_process_wide_key_atomic},
 };
-use nx_sys_thread::tls;
 
 use super::Mutex;
+use crate::tls;
 
 /// A condition variable primitive for thread synchronization.
 ///

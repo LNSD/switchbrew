@@ -24,6 +24,8 @@ mod remutex;
 mod rwlock;
 mod semaphore;
 
+mod tls;
+
 /// #[panic_handler]
 ///
 /// Use different panic handlers for debug and release builds.

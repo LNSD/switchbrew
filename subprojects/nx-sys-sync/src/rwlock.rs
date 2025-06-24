@@ -5,10 +5,10 @@
 use core::cell::UnsafeCell;
 
 use nx_svc::raw::{Handle, INVALID_HANDLE};
-use nx_sys_thread::tls;
 use static_assertions::const_assert_eq;
 
 use super::{Condvar, Mutex};
+use crate::tls;
 
 /// Read/write lock structure that allows multiple readers or a single writer.
 #[repr(C)]
@@ -355,7 +355,7 @@ impl PartialEq<Handle> for WriteOwnerTag {
     }
 }
 
-/// Get the current thread's kernel handle
+/// Get the current thread's kernel handle.
 #[inline(always)]
 fn get_curr_thread_handle() -> Handle {
     tls::get_current_thread_handle().to_raw()

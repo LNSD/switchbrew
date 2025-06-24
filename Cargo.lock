@@ -137,8 +137,8 @@ dependencies = [
 name = "nx-sys-sync"
 version = "0.1.0"
 dependencies = [
+ "nx-cpu",
  "nx-svc",
- "nx-sys-thread",
  "panic-abort",
  "panic-halt",
  "static_assertions",
