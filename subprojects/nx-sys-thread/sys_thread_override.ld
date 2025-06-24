@@ -13,10 +13,12 @@ EXTERN(__nx_sys_thread_get_current_thread_handle);
 getThreadVars = __nx_sys_thread_get_thread_vars;
 threadGetCurHandle = __nx_sys_thread_get_current_thread_handle;
 
-/* Thread activity (pause/resume) */
+/* Thread activity */
+EXTERN(__nx_sys_thread_start)
 EXTERN(__nx_sys_thread_pause)
 EXTERN(__nx_sys_thread_resume)
 
+threadStart = __nx_sys_thread_start;
 threadPause = __nx_sys_thread_pause;
 threadResume = __nx_sys_thread_resume;
 
