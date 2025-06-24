@@ -261,9 +261,10 @@ impl ToRawResultCode for CloseHandleError {
 ///
 /// The target thread must have been paused beforehand (see [`pause`]) to ensure
 /// a consistent snapshot.
-pub fn get_context3(ctx: &mut raw::ThreadContext, thread: Handle) -> Result<(), GetContext3Error> {
-    let rc = unsafe { raw::get_thread_context3(ctx as *mut raw::ThreadContext, thread.0) };
-    RawResult::from_raw(rc).map((), |rc| match rc.description() {
+pub fn get_context3(thread: Handle) -> Result<raw::ThreadContext, GetContext3Error> {
+    let mut ctx = raw::ThreadContext::zeroed();
+    let rc = unsafe { raw::get_thread_context3(&mut ctx, thread.0) };
+    RawResult::from_raw(rc).map(ctx, |rc| match rc.description() {
         desc if KError::InvalidHandle == desc => GetContext3Error::InvalidHandle,
         _ => GetContext3Error::Unknown(rc.into()),
     })

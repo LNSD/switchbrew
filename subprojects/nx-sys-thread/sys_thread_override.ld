@@ -22,6 +22,11 @@ threadStart = __nx_sys_thread_start;
 threadPause = __nx_sys_thread_pause;
 threadResume = __nx_sys_thread_resume;
 
+/* Thread context */
+EXTERN(__nx_sys_thread_dump_context)
+
+threadDumpContext = __nx_sys_thread_dump_context;
+
 /* libc (newlib) */
 EXTERN(__nx_std_thread_newlib_sleep)
 EXTERN(__nx_std_thread_newlib_usleep)

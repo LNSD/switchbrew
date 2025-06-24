@@ -24,8 +24,6 @@
 //! thread that is already paused (and likewise [`resume`] on a running
 //! thread) is harmless and treated as a no-op by the kernel.
 
-#[cfg(feature = "ffi")]
-use nx_svc::error::{ResultCode, ToRawResultCode};
 use nx_svc::{result::Error, thread as svc};
 
 use super::info::Thread;
@@ -65,8 +63,8 @@ impl From<svc::StartThreadError> for ThreadStartError {
 }
 
 #[cfg(feature = "ffi")]
-impl ToRawResultCode for ThreadStartError {
-    fn to_rc(self) -> ResultCode {
+impl nx_svc::error::ToRawResultCode for ThreadStartError {
+    fn to_rc(self) -> nx_svc::error::ResultCode {
         match self {
             Self::InvalidHandle => svc::StartThreadError::InvalidHandle.to_rc(),
             Self::Unknown(err) => err.to_rc(),
@@ -110,8 +108,8 @@ impl From<svc::PauseThreadError> for ThreadPauseError {
 }
 
 #[cfg(feature = "ffi")]
-impl ToRawResultCode for ThreadPauseError {
-    fn to_rc(self) -> ResultCode {
+impl nx_svc::error::ToRawResultCode for ThreadPauseError {
+    fn to_rc(self) -> nx_svc::error::ResultCode {
         match self {
             Self::InvalidHandle => svc::PauseThreadError::InvalidHandle.to_rc(),
             Self::Unknown(err) => err.to_rc(),
@@ -151,8 +149,8 @@ impl From<svc::ResumeThreadError> for ThreadResumeError {
 }
 
 #[cfg(feature = "ffi")]
-impl ToRawResultCode for ThreadResumeError {
-    fn to_rc(self) -> ResultCode {
+impl nx_svc::error::ToRawResultCode for ThreadResumeError {
+    fn to_rc(self) -> nx_svc::error::ResultCode {
         match self {
             Self::InvalidHandle => svc::ResumeThreadError::InvalidHandle.to_rc(),
             Self::Unknown(err) => err.to_rc(),

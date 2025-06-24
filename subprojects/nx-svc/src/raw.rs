@@ -374,6 +374,12 @@ pub struct ThreadContext {
 }
 
 impl ThreadContext {
+    /// Create a new thread context with all registers set to zero.
+    pub fn zeroed() -> Self {
+        // SAFETY: This is safe because the thread context is a POD type.
+        unsafe { core::mem::zeroed() }
+    }
+
     /// Determines whether a thread context belong to an AArch64 process based on the PSR.
     ///
     /// Returns true if and only if the thread context belongs to an AArch64 process.
