@@ -31,5 +31,5 @@ pub unsafe extern "C" fn __nx_sys_thread_get_thread_vars() -> *mut ThreadVars {
 #[inline]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sys_thread_get_tls_start_offset() -> usize {
-    tls::start_offset()
+    tls::static_tls_data_start_offset()
 }

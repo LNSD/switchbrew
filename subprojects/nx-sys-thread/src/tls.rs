@@ -69,19 +69,27 @@
 //! * Each entry is pointer-sized, so it can hold any `*mut T` or small integral
 //!   value cast to `usize`.
 //!
-//! #### ThreadVars (`0x1E0` – `0x200`)
+//! #### [`ThreadVars`] (`0x1E0` – `0x200`)
 //!
 //! A fixed 32-byte footer holding per-thread metadata that libnx needs
 //! constantly: a *magic* value, the thread's kernel handle, a link to the
 //! rust/C thread object, a pointer to the newlib re-entrancy state and a cached
 //! copy of the thread-pointer (TP) value.
-////!
-//! Inside *ThreadVars* (offsets from 0x1E0):
-//!   ├── 0x00  magic (u32)
-//!   ├── 0x04  handle (u32)
-//!   ├── 0x08  thread_ptr (*mut c_void)
-//!   ├── 0x10  reent (*mut c_void)
-//!   └── 0x18  tls_tp (*mut c_void)
+//!
+//! ```text
+//! TLS base + 0x1E0
+//! 0x1E0 ┌────────────────────────────┐
+//!       │ magic       (u32)          │
+//! 0x1E4 ├────────────────────────────┤
+//!       │ handle      (u32)          │
+//! 0x1E8 ├────────────────────────────┤
+//!       │ thread_ptr  (*mut c_void)  │
+//! 0x1F0 ├────────────────────────────┤
+//!       │ reent       (*mut c_void)  │
+//! 0x1F8 ├────────────────────────────┤
+//!       │ tls_tp      (*mut c_void)  │
+//! 0x200 └────────────────────────────┘
+//! ```
 //!
 //! ## References
 //! - [Switchbrew Wiki: Thread Local Region](https://switchbrew.org/wiki/Thread_Local_Region)
@@ -229,8 +237,8 @@ pub fn get_current_thread_handle() -> Handle {
     unsafe { ptr::read_volatile(&raw const (*tv).handle) }
 }
 
-/// Calculates the start offset (in bytes) of the initialised TLS data (`.tdata` / `.tbss`) within
-/// a thread's TLS block.
+/// Returns the offset (in bytes) from the beginning of the TLS block to the
+/// start of the *static* thread-local data (.tdata / .tbss).
 ///
 /// The TLS area begins with the *Thread Control Block* (TCB), which on Horizon is defined as two
 /// pointer-sized fields (16 bytes on AArch64).  
@@ -239,7 +247,7 @@ pub fn get_current_thread_handle() -> Handle {
 /// alignment as communicated by the linker via the [`__tls_align`] symbol. At runtime we therefore
 /// take the maximum of the natural TCB size and the linker-supplied alignment value.
 #[inline]
-pub fn start_offset() -> usize {
+pub fn static_tls_data_start_offset() -> usize {
     // The Horizon TCB consists of two pointer-sized slots.
     let tcb_sz = 2 * size_of::<*mut c_void>();
 
