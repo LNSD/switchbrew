@@ -5,7 +5,6 @@ mod ffi;
 
 mod thread_impl;
 pub mod tls;
-pub mod tls_thread_vars;
 
 /// #[panic_handler]
 ///

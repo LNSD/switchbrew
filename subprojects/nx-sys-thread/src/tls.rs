@@ -13,9 +13,10 @@
 //! - [Switchbrew Wiki: Thread Local Region](https://switchbrew.org/wiki/Thread_Local_Region)
 //! - [switchbrew/libnx: tls.h](https://github.com/switchbrew/libnx/blob/master/nx/include/switch/arm/tls.h)
 
-use core::{ffi::c_void, mem::size_of};
+use core::{ffi::c_void, mem::size_of, ptr};
 
 use nx_cpu::control_regs;
+use nx_svc::thread::Handle;
 
 /// Size of the Thread Local Storage (TLS) region.
 pub const TLS_SIZE: usize = 0x200;
@@ -39,6 +40,11 @@ pub const THREAD_VARS_SIZE: usize = 0x20;
 /// The number of slots is calculated as the difference between the end and the beginning
 /// of the user-mode TLS region, divided by the size of the slot.
 pub const NUM_TLS_SLOTS: usize = (USER_TLS_END - USER_TLS_BEGIN) / size_of::<*mut c_void>();
+
+/// Magic value used to verify that the [`ThreadVars`] structure is initialised.
+///
+/// The value corresponds to the ASCII string "!TV$".
+pub const THREAD_VARS_MAGIC: u32 = 0x21545624;
 
 // Linker-defined symbols
 unsafe extern "C" {
@@ -89,6 +95,27 @@ unsafe extern "C" {
     pub static __tls_align: usize;
 }
 
+/// Per-thread variables located at the end of the TLS area.
+///
+/// The struct occupies exactly [`THREAD_VARS_SIZE`] bytes (0x20) and matches the
+/// layout used by the Horizon OS loader as documented on Switchbrew.
+#[derive(Debug)]
+#[repr(C)]
+pub struct ThreadVars {
+    /// Magic value used to check if the struct is initialised.
+    pub magic: u32,
+    /// Kernel handle identifying the thread.
+    pub handle: Handle,
+    /// Pointer to the current thread object (if any).
+    pub thread_info_ptr: *mut c_void,
+    /// Pointer to the thread's newlib reentrancy state.
+    pub reent: *mut c_void,
+    /// Pointer to this thread's thread-local segment (TP).
+    ///
+    /// This is located at *TLS + 0x1F8*.
+    pub tls_tp: *mut c_void,
+}
+
 /// Get a raw pointer to the Thread Local Storage (TLS) buffer.
 ///
 /// This function reads the `tpidrro_el0` system register, which holds the
@@ -106,4 +133,55 @@ unsafe extern "C" {
 #[inline]
 pub fn get_tls_ptr() -> *mut c_void {
     unsafe { control_regs::tpidrro_el0() }
+}
+
+/// Returns a raw pointer to the [`ThreadVars`] for the current thread.
+#[inline]
+pub fn thread_vars_ptr() -> *mut ThreadVars {
+    let tls_ptr = get_tls_ptr();
+
+    // SAFETY: The TLS area is 0x200 bytes in size, the [`ThreadVars`] sits at
+    // the very end of it.
+    unsafe { tls_ptr.add(TLS_SIZE - THREAD_VARS_SIZE) as *mut ThreadVars }
+}
+
+/// Returns the [`Handle`] of the current thread.
+#[inline]
+pub fn get_current_thread_handle() -> Handle {
+    let tv = thread_vars_ptr();
+    // SAFETY: `tv` points to a valid `ThreadVars` inside the current thread's
+    // TLS block. The field access is performed with `read_volatile` to avoid
+    // the compiler re-ordering or eliminating the read.
+    unsafe { ptr::read_volatile(&raw const (*tv).handle) }
+}
+
+/// Calculates the start offset (in bytes) of the initialised TLS data (`.tdata` / `.tbss`) within
+/// a thread's TLS block.
+///
+/// The TLS area begins with the *Thread Control Block* (TCB), which on Horizon is defined as two
+/// pointer-sized fields (16 bytes on AArch64).  
+///
+/// The actual thread–local data must be placed after this TCB, but it might also require a stricter
+/// alignment as communicated by the linker via the [`__tls_align`] symbol.  At runtime we therefore
+/// take the maximum of the natural TCB size and the linker-supplied alignment value.
+#[inline]
+pub fn start_offset() -> usize {
+    // The Horizon TCB consists of two pointer-sized slots.
+    let tcb_sz = 2 * size_of::<*mut c_void>();
+
+    // SAFETY: `__tls_align` is set up by the linker and guaranteed to point to a valid `usize`
+    // that contains the required alignment of the TLS block.
+    let align = unsafe { __tls_align };
+
+    if align > tcb_sz { align } else { tcb_sz }
+}
+
+#[cfg(test)]
+mod tests {
+    use static_assertions::const_assert_eq;
+
+    use super::{THREAD_VARS_SIZE, ThreadVars};
+
+    // Ensure the layout stays consistent with Horizon expectations.
+    const_assert_eq!(size_of::<ThreadVars>(), THREAD_VARS_SIZE);
 }

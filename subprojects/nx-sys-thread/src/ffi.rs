@@ -3,4 +3,5 @@
 mod sleep;
 mod thread_activity;
 mod thread_context;
+mod thread_info;
 mod tls;

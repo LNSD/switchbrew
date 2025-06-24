@@ -3,29 +3,27 @@
 
 /* Thread Local Storage (TLS) */
 EXTERN(__nx_sys_thread_get_ptr);
-
-armGetTls = __nx_sys_thread_get_ptr;
-
-/* Thread Variables */
 EXTERN(__nx_sys_thread_get_thread_vars);
-EXTERN(__nx_sys_thread_get_current_thread_handle);
+EXTERN(__nx_sys_thread_get_tls_start_offset);
 
+armGetTls     = __nx_sys_thread_get_ptr;
 getThreadVars = __nx_sys_thread_get_thread_vars;
-threadGetCurHandle = __nx_sys_thread_get_current_thread_handle;
+getTlsStartOffset = __nx_sys_thread_get_tls_start_offset;
 
-/* Thread activity */
+/* Thread */
 EXTERN(__nx_sys_thread_start)
 EXTERN(__nx_sys_thread_pause)
 EXTERN(__nx_sys_thread_resume)
-
-threadStart = __nx_sys_thread_start;
-threadPause = __nx_sys_thread_pause;
-threadResume = __nx_sys_thread_resume;
-
-/* Thread context */
 EXTERN(__nx_sys_thread_dump_context)
+EXTERN(__nx_sys_thread_get_cur_handle);
+EXTERN(__nx_sys_thread_get_self);
 
-threadDumpContext = __nx_sys_thread_dump_context;
+threadStart        = __nx_sys_thread_start;
+threadPause        = __nx_sys_thread_pause;
+threadResume       = __nx_sys_thread_resume;
+threadDumpContext  = __nx_sys_thread_dump_context;
+threadGetCurHandle = __nx_sys_thread_get_cur_handle;
+threadGetSelf      = __nx_sys_thread_get_self;
 
 /* libc (newlib) */
 EXTERN(__nx_std_thread_newlib_sleep)
@@ -33,7 +31,7 @@ EXTERN(__nx_std_thread_newlib_usleep)
 EXTERN(__nx_std_thread_newlib_nanosleep)
 EXTERN(__nx_std_thread_newlib_sched_yield)
 
-sleep = __nx_std_thread_newlib_sleep;
-usleep = __nx_std_thread_newlib_usleep;
-nanosleep = __nx_std_thread_newlib_nanosleep;
+sleep       = __nx_std_thread_newlib_sleep;
+usleep      = __nx_std_thread_newlib_usleep;
+nanosleep   = __nx_std_thread_newlib_nanosleep;
 sched_yield = __nx_std_thread_newlib_sched_yield;

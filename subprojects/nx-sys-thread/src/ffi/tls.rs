@@ -2,17 +2,11 @@
 //!
 //! # References
 //! - [switchbrew/libnx: switch/arm/tls.h](https://github.com/switchbrew/libnx/blob/master/nx/include/switch/arm/tls.h)
+//! - [switchbrew/libnx: internal.h](https://github.com/switchbrew/libnx/blob/master/nx/include/switch/internal.h)
 
 use core::ffi::c_void;
 
-use nx_svc::thread::Handle;
-
-use crate::{
-    tls,
-    tls_thread_vars::{self, ThreadVars},
-};
-
-//<editor-fold desc="switch/arm/tls.h">
+use crate::tls::{self, ThreadVars};
 
 /// Gets the thread-local storage (TLS) buffer.
 ///
@@ -20,32 +14,22 @@ use crate::{
 /// read-only thread pointer for the current thread.
 ///
 /// Returns a pointer to the thread-local storage buffer.
-#[inline]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sys_thread_get_ptr() -> *mut c_void {
     tls::get_tls_ptr()
 }
 
-//</editor-fold>
-
-//<editor-fold desc="source/internal.h">
-
 /// Returns a mutable reference to the `ThreadVars` structure for the current thread.
-#[inline]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn __nx_sys_thread_get_thread_vars() -> *mut ThreadVars {
-    tls_thread_vars::thread_vars_ptr()
+    tls::thread_vars_ptr()
 }
 
-/// Returns the current thread's handle.
-///
-/// Get the `Handle` for the current thread from the TLR.
-///
-/// The thread handle is used for mutexes.
+/// Returns the start offset (in bytes) of the initialised TLS data (`.tdata`/`.tbss`) within a
+/// thread's TLS block. Mirrors the behaviour of `getTlsStartOffset()` from the original C
+/// implementation.
 #[inline]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn __nx_sys_thread_get_current_thread_handle() -> Handle {
-    tls_thread_vars::get_current_thread_handle()
+pub unsafe extern "C" fn __nx_sys_thread_get_tls_start_offset() -> usize {
+    tls::start_offset()
 }
-
-//</editor-fold>
