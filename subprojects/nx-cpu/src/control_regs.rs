@@ -2,7 +2,7 @@
 //!
 //! This module provides functions for interacting with the CPU control registers.
 
-use core::{arch::asm, ffi::c_void};
+use core::arch::asm;
 
 /// Read the `cntpct_el0` system register.
 ///
@@ -66,18 +66,18 @@ pub unsafe fn cntfrq_el0() -> u64 {
 
 /// Read the `tpidrro_el0` system register.
 ///
-/// This function reads the `tpidrro_el0` system register, which holds the
-/// read-only thread pointer for the current thread.
+/// This function reads the `tpidrro_el0` system register, which holds the read-only thread pointer
+/// for the current thread.
 ///
-/// Returns a pointer to the thread-local storage buffer.
+/// Returns the base address of the Thread-Local Storage (TLS) buffer.
 ///
 /// # References
 ///
 /// - [ARM TPIDRRO_ELO Register](https://developer.arm.com/documentation/ddi0601/2024-12/AArch64-Registers/TPIDRRO-EL0--EL0-Read-Only-Software-Thread-ID-Register)
 /// - [rust-embedded/aarch64-cpu: tpidrro_el0.rs](https://github.com/rust-embedded/aarch64-cpu/blob/main/src/registers/tpidrro_el0.rs)
 #[inline]
-pub unsafe fn tpidrro_el0() -> *mut c_void {
-    let tls_ptr: *mut c_void;
+pub unsafe fn tpidrro_el0() -> usize {
+    let tls_ptr: usize;
     // SAFETY: Assembly only loads the system register value
     unsafe {
         asm!(

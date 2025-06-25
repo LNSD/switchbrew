@@ -198,27 +198,42 @@ pub struct ThreadVars {
     pub tls_tp: *mut c_void,
 }
 
-/// Get a raw pointer to the Thread Local Storage (TLS) buffer.
+/// Returns the base address of this thread's Thread-Local Storage (TLS) block as a plain
+/// `usize`.
 ///
-/// This function reads the `tpidrro_el0` system register, which holds the
-/// read-only thread pointer for the current thread. The returned pointer
-/// points to a 512-byte (0x200) Thread Local Storage (TLS) region.
+/// On AArch64 the per-thread TLS pointer is exposed to user-mode code via the
+/// read-only system register `TPIDRRO_EL0`. Horizon OS initialises this register
+/// during thread creation to point at the first byte of the 0x200-byte TLS
+/// block described at the top of this module.
 ///
-/// Returns a raw pointer to the 512-byte Thread Local Storage (TLS) for the current thread.
+/// This function is nothing more than a thin, *safe* wrapper around a single
+/// `mrs` instruction that reads that register. Because merely reading the
+/// register cannot violate any safety guarantees the function is safe to call;
+/// however any *use* of the returned address (e.g. by dereferencing it) must
+/// observe the TLS layout documented in this file.
 ///
-/// # Safety
-///
-/// This function is safe to call, but dereferencing the returned pointer
-/// requires careful attention to the TLS memory layout.
+/// If you need a raw pointer instead of an integer address, use
+/// [`get_ptr`] which performs the cast for you.
 #[inline]
-pub fn get_tls_ptr() -> *mut c_void {
+pub fn get_base_addr() -> usize {
     unsafe { control_regs::tpidrro_el0() }
+}
+
+/// Returns a raw pointer to the 512-byte Thread Local Storage (TLS) for the
+/// current thread.
+///
+/// This is simply [`get_base_addr`] cast to a pointer, so obtaining the value
+/// is completely safe. **Dereferencing** the pointer, however, requires `unsafe`
+/// code and must respect the TLS layout documented in this module.
+#[inline]
+pub fn get_ptr() -> *mut c_void {
+    get_base_addr() as *mut c_void
 }
 
 /// Returns a raw pointer to the [`ThreadVars`] for the current thread.
 #[inline]
 pub fn thread_vars_ptr() -> *mut ThreadVars {
-    let tls_ptr = get_tls_ptr();
+    let tls_ptr = get_ptr();
 
     // SAFETY: The TLS area is 0x200 bytes in size, the [`ThreadVars`] sits at
     // the very end of it.
@@ -265,7 +280,7 @@ pub fn static_tls_data_start_offset() -> usize {
 /// * The caller must ensure the returned slice is not aliased mutably elsewhere.
 #[inline(always)]
 unsafe fn slots() -> &'static [*mut c_void] {
-    let tls_ptr = get_tls_ptr();
+    let tls_ptr = get_ptr();
 
     // SAFETY: The caller must ensure the returned slice is not aliased mutably elsewhere.
     unsafe {
@@ -283,7 +298,7 @@ unsafe fn slots() -> &'static [*mut c_void] {
 /// * The caller must ensure the returned slice is not aliased mutably elsewhere.
 #[inline(always)]
 unsafe fn slots_mut() -> &'static mut [*mut c_void] {
-    let tls_ptr = get_tls_ptr();
+    let tls_ptr = get_ptr();
 
     // SAFETY: The caller must ensure the returned slice is not aliased mutably elsewhere.
     unsafe {

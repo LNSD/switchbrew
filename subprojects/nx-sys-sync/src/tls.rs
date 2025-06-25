@@ -84,7 +84,7 @@ const TLS_HANDLE_OFFSET: usize = 0x1E4;
 /// [`TPIDRRO_EL0`]: https://developer.arm.com/documentation/ddi0595/2021-12/AArch64-Registers/TPIDRRO-EL0--EL0-Read-Only-Thread-ID-Register
 #[inline]
 fn get_tls_ptr() -> *mut c_void {
-    unsafe { control_regs::tpidrro_el0() }
+    unsafe { control_regs::tpidrro_el0() as *mut c_void }
 }
 
 /// Fetches the kernel [`Handle`] of the **currently executing thread**.

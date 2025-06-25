@@ -16,7 +16,7 @@ use crate::tls::{self, ThreadVars};
 /// Returns a pointer to the thread-local storage buffer.
 #[unsafe(no_mangle)]
 unsafe extern "C" fn __nx_sys_thread_get_ptr() -> *mut c_void {
-    tls::get_tls_ptr()
+    tls::get_ptr()
 }
 
 /// Returns a mutable reference to the `ThreadVars` structure for the current thread.
