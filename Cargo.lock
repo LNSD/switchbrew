@@ -148,7 +148,10 @@ dependencies = [
 name = "nx-sys-thread"
 version = "0.1.0"
 dependencies = [
+ "intrusive-collections",
+ "nx-alloc",
  "nx-cpu",
+ "nx-std-sync",
  "nx-svc",
  "panic-abort",
  "panic-halt",

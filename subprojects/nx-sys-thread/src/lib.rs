@@ -1,10 +1,9 @@
 #![no_std]
 
-#[cfg(feature = "ffi")]
-mod ffi;
-
-mod thread_impl;
-pub mod tls;
+// The `alloc` crate enables memory allocation.
+extern crate alloc;
+// The `nx-alloc` crate exposes the `#[global_allocator]` for the dependent crates.
+extern crate nx_alloc;
 
 /// #[panic_handler]
 ///
@@ -22,3 +21,9 @@ use panic_abort as _;
 #[allow(unused_imports)]
 use panic_halt as _;
 pub use thread_impl::*;
+
+mod thread_impl;
+pub mod tls;
+
+#[cfg(feature = "ffi")]
+mod ffi;
