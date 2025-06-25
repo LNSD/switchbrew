@@ -275,13 +275,90 @@ pub unsafe fn signal_process_wide_key(condvar: *mut u32, count: i32) {
     unsafe { raw::signal_process_wide_key(condvar, count) };
 }
 
-/// Upper bound on how many synchronization objects the high-level [`wait_synchronization`] wrapper
-/// will forward to the kernel.
+/// Upper bound on how many synchronization objects the high-level public wrappers
+/// ([`wait_synchronization_multiple`] and [`wait_synchronization_single`]) will forward to the
+/// kernel.
 ///
 /// If the caller supplies a longer slice, only the first `MAX_WAIT_HANDLES` elements are forwarded
 /// and the remainder is **silently ignored**.  This mirrors the Horizon kernel limit (64) while
 /// avoiding a panic or allocation inside the wrapper.
 pub const MAX_WAIT_HANDLES: usize = 64;
+
+/// Blocks the current thread until `handle` is signalled, a timeout expires or the wait is
+/// cancelled.
+///
+/// This is a convenience wrapper around [`wait_synchronization_multiple`] that forwards exactly
+/// one handle.  On success it discards the signalled‐index information and simply returns `Ok(())`.
+///
+/// # Arguments
+/// * `handle`     – Object implementing [`Waitable`].  Its underlying kernel handle is extracted
+///                  via [`Waitable::raw_handle`].
+/// * `timeout`    – Timeout in nanoseconds (use `u64::MAX` for an infinite wait, `0` for an
+///                  immediate check).
+///
+/// Returns an [`Ok(())`] on success or a [`WaitSyncError`] if the wait fails.
+///
+/// # Safety
+/// See [`wait_synchronization_multiple`].  In addition, the caller must uphold those invariants
+/// for the single `handle` passed here.
+pub unsafe fn wait_synchronization_single<W>(handle: &W, timeout: u64) -> Result<(), WaitSyncError>
+where
+    W: Waitable,
+{
+    // SAFETY: We forward a single raw handle; the slice we create lives on the stack for the full
+    // duration of the syscall and thus fulfils the memory invariants documented below.
+    unsafe { wait_synchronization(&[handle.raw_handle()], timeout).map(|_| ()) }
+}
+
+/// Waits on *up to* [`MAX_WAIT_HANDLES`] objects, returning the index of the first one that becomes
+/// signalled.
+///
+/// Compared to the low-level [`raw::wait_synchronization`] syscall this helper accepts any type
+/// implementing [`Waitable`], automatically truncates slices longer than the kernel's maximum and
+/// hides the `unsafe` call site from the user.
+///
+/// # Arguments
+/// * `handles`    – Any iterator yielding [`Waitable`] objects. If it produces more than
+///                  [`MAX_WAIT_HANDLES`] elements, only the first `MAX_WAIT_HANDLES` values are
+///                  considered; additional items are **silently ignored**.
+/// * `timeout`    – Timeout in nanoseconds (`u64::MAX` ≅ infinite).
+///
+/// Returns an [`Ok(usize)`] indicating the index of the signalled handle on success or a
+/// [`WaitSyncError`] if the wait fails.
+///
+/// # Safety
+/// The caller must guarantee that **each handle yielded by the iterator and actually forwarded to
+/// the kernel (i.e. the first *n* items with `n ≤ MAX_WAIT_HANDLES`)**:
+/// 1. Yields a *valid* kernel handle owned by the current process.
+/// 2. Is *not* one of the special pseudo-handles [`raw::CUR_THREAD_HANDLE`] or
+///    [`raw::CUR_PROCESS_HANDLE`].
+///
+/// The underlying kernel handles must remain valid for the entire duration of the wait.  No
+/// additional memory-safety requirements apply because the values are copied into a stack buffer
+/// before the syscall is issued.
+pub unsafe fn wait_synchronization_multiple<'a, W, I>(
+    handles: I,
+    timeout: u64,
+) -> Result<usize, WaitSyncError>
+where
+    W: Waitable + 'a,
+    I: IntoIterator<Item = &'a W>,
+{
+    // Limit the number of handles to the kernel limit
+    let handles_iter = handles.into_iter().take(MAX_WAIT_HANDLES);
+
+    // Build a stack-allocated array and copy up to `MAX_WAIT_HANDLES` raw handles into it.
+    let mut raw_handles: [Handle; MAX_WAIT_HANDLES] = [raw::INVALID_HANDLE; MAX_WAIT_HANDLES];
+    let mut raw_handles_count = 0usize;
+    for (slot, h) in raw_handles.iter_mut().zip(handles_iter) {
+        *slot = h.raw_handle();
+        raw_handles_count += 1;
+    }
+
+    // SAFETY: We forward at most `MAX_WAIT_HANDLES` handles, each obtained from a `Waitable`
+    // supplied by the caller. The slice lives on the stack for the entire syscall.
+    unsafe { wait_synchronization(&raw_handles[..raw_handles_count], timeout) }
+}
 
 /// Waits on one or more synchronization objects
 ///
@@ -291,11 +368,11 @@ pub const MAX_WAIT_HANDLES: usize = 64;
 /// # Arguments
 /// | Arg | Name | Description |
 /// | --- | --- | --- |
-/// | IN | _handles_ | Slice of objects implementing [`Waitable`] to wait on. Each element yields its underlying kernel handle via [`Waitable::raw_handle`]. If the slice is longer than [`MAX_HANDLES`], only the first [`MAX_HANDLES`] elements are considered. |
-/// | IN | _timeout_ns_ | Timeout in nanoseconds. Use `u64::MAX` for an infinite wait, `0` for an immediate check. |
+/// | IN | _handles_ | Slice of raw kernel handles. If the slice is longer than [`MAX_WAIT_HANDLES`], only the first [`MAX_WAIT_HANDLES`] elements are considered. |
+/// | IN | _timeout_ | Timeout in nanoseconds. Use `u64::MAX` for an infinite wait, `0` for an immediate check. |
 ///
-/// # Returns
-/// On success returns the index (within `handles`) of the object that was signalled.
+/// Returns an [`Ok(usize)`] indicating the index of the signalled handle on success or a
+/// [`WaitSyncError`] if the wait fails.
 ///
 /// # Behavior
 /// This function calls the [`__nx_svc_wait_synchronization`] syscall under the hood.
@@ -304,8 +381,8 @@ pub const MAX_WAIT_HANDLES: usize = 64;
 /// 2. If any of the objects are already signalled, return immediately with its index.
 /// 3. Otherwise, block the current thread until either:
 ///    - One of the objects becomes signalled → success, returning its index.
-///    - The timeout expires              → [`WaitSynchronizationError::TimedOut`].
-///    - The wait gets cancelled via [`__nx_svc_cancel_synchronization`] → [`WaitSynchronizationError::Cancelled`].
+///    - The timeout expires              → [`WaitSyncError::TimedOut`].
+///    - The wait gets cancelled via [`__nx_svc_cancel_synchronization`] → [`WaitSyncError::Cancelled`].
 ///
 /// # Notes
 /// - Passing an empty slice results in a sleep until `timeout_ns` elapses (or indefinitely when
@@ -313,74 +390,64 @@ pub const MAX_WAIT_HANDLES: usize = 64;
 ///   should not be relied upon.
 /// - The special pseudo-handles [`raw::CUR_THREAD_HANDLE`] and [`raw::CUR_PROCESS_HANDLE`] **must not**
 ///   appear among the first [`MAX_WAIT_HANDLES`] entries – doing so triggers
-///   [`WaitSynchronizationError::InvalidHandle`].
-/// - The error variant [`WaitSynchronizationError::OutOfRange`] is unlikely to be returned by this
+///   [`WaitSyncError::InvalidHandle`].
+/// - The error variant [`WaitSyncError::OutOfRange`] is unlikely to be returned by this
 ///   wrapper because the argument list is clamped to [`MAX_WAIT_HANDLES`] before the syscall is issued;
 ///   it is kept for forward-compatibility.
 ///
 /// # Safety
 /// The caller must uphold the following invariants:
-/// 1. Only the first [`MAX_WAIT_HANDLES`] entries of `handles` are forwarded to the kernel.  Each of
-///    those entries **must** yield a valid kernel handle owned by the current process and **must
-///    not** be one of the pseudo-handles [`raw::CUR_THREAD_HANDLE`] or
-///    [`raw::CUR_PROCESS_HANDLE`].
+/// 1. Only the first `handles.len().min(MAX_WAIT_HANDLES)` entries are forwarded. Each of those
+///    handles **must** be valid, owned by the current process and **must not** be one of the
+///    pseudo-handles [`raw::CUR_THREAD_HANDLE`] or [`raw::CUR_PROCESS_HANDLE`].
 /// 2. The memory backing the `handles` slice must remain valid and immutable for the entire
 ///    duration of the syscall (it is read by the kernel while the thread is in user-space).
 ///
 /// Violating any of these requirements results in **undefined behaviour**.
-pub unsafe fn wait_synchronization<H>(
-    handles: &[H],
-    timeout_ns: u64,
-) -> Result<usize, WaitSynchronizationError>
-where
-    H: Waitable,
-{
-    // Stack-allocate a fixed buffer and copy only the used handles. We then create a slice that
-    // covers just the initial `handles.len()` elements so that only the relevant part of the
-    // buffer is visible to the kernel.
-    let handles_len = handles.len().min(MAX_WAIT_HANDLES);
-    let mut raw_handles: [Handle; MAX_WAIT_HANDLES] = [raw::INVALID_HANDLE; MAX_WAIT_HANDLES];
-    for (dst, src) in raw_handles[..handles_len]
-        .iter_mut()
-        .zip(handles[..handles_len].iter())
-    {
-        *dst = src.raw_handle();
-    }
-
+unsafe fn wait_synchronization(handles: &[Handle], timeout: u64) -> Result<usize, WaitSyncError> {
     let mut idx: i32 = -1;
-    let raw_handles = &raw_handles[..handles_len];
 
-    // SAFETY: `raw_slice.as_ptr()` is valid for reads of `handles.len()` * size_of::<Handle>()
-    // bytes because the buffer lives on the stack for the duration of the call and is properly
-    // initialised for the first `handles.len()` entries.
+    // SAFETY: The pointer passed to the kernel is valid for `handles.len()` * size_of::<Handle>()
+    // bytes because the slice lives on the stack (borrowed from `handles`) for the entire syscall
+    // duration and is immutable.
     let rc = unsafe {
-        raw::wait_synchronization(
-            &mut idx,
-            raw_handles.as_ptr(),
-            raw_handles.len() as i32,
-            timeout_ns,
-        )
+        raw::wait_synchronization(&mut idx, handles.as_ptr(), handles.len() as i32, timeout)
     };
 
     RawResult::from_raw(rc).map(idx as usize, |rc| match rc.description() {
-        desc if KError::InvalidHandle == desc => WaitSynchronizationError::InvalidHandle,
-        desc if KError::TimedOut == desc => WaitSynchronizationError::TimedOut,
-        desc if KError::Cancelled == desc => WaitSynchronizationError::Cancelled,
-        desc if KError::OutOfRange == desc => WaitSynchronizationError::OutOfRange,
-        _ => WaitSynchronizationError::Unknown(Error::from(rc)),
+        desc if KError::InvalidHandle == desc => WaitSyncError::InvalidHandle,
+        desc if KError::TimedOut == desc => WaitSyncError::TimedOut,
+        desc if KError::Cancelled == desc => WaitSyncError::Cancelled,
+        desc if KError::OutOfRange == desc => WaitSyncError::OutOfRange,
+        _ => WaitSyncError::Unknown(Error::from(rc)),
     })
 }
 
-/// Error type for [`wait_synchronization`]
+/// Error type returned by [`wait_synchronization_multiple`] and
+/// [`wait_synchronization_single`].
+///
+/// Horizon's `svcWaitSynchronization` (SVC ID `0x18`) can only surface **four** well-defined
+/// kernel error descriptions. They map to the variants below as follows:
+///
+/// | Description value | Meaning in kernel sources | Enum variant here |
+/// |-------------------|---------------------------|-------------------|
+/// | `114` (`0x72`)    | `InvalidHandle`           | [`InvalidHandle`] |
+/// | `117` (`0x75`)    | `TimedOut`                | [`TimedOut`]      |
+/// | `118` (`0x76`)    | `Cancelled`               | [`Cancelled`]     |
+/// | `119` (`0x77`)    | `OutOfRange` (*a.k.a.*
+///   `MaximumExceeded` in some homebrew tooling) | [`OutOfRange`]    |
+///
+/// The `Unknown` catch-all is kept for forward-compatibility in case Nintendo extends the
+/// interface with additional error codes.
 #[derive(Debug, thiserror::Error)]
-pub enum WaitSynchronizationError {
+pub enum WaitSyncError {
     /// One (or more) of the supplied handles is invalid.
     #[error("Invalid handle")]
     InvalidHandle,
     /// The wait operation timed out.
     #[error("Operation timed out")]
     TimedOut,
-    /// The wait was cancelled via [`__nx_svc_cancel_synchronization`].
+    /// The wait was cancelled via [`a__nx_svc_cancel_synchronization`].
     #[error("Wait cancelled")]
     Cancelled,
     /// The number of handles supplied is out of range (must be ≤ 0x40).
@@ -391,14 +458,14 @@ pub enum WaitSynchronizationError {
     Unknown(Error),
 }
 
-impl ToRawResultCode for WaitSynchronizationError {
+impl ToRawResultCode for WaitSyncError {
     fn to_rc(self) -> ResultCode {
         match self {
-            WaitSynchronizationError::InvalidHandle => KError::InvalidHandle.to_rc(),
-            WaitSynchronizationError::TimedOut => KError::TimedOut.to_rc(),
-            WaitSynchronizationError::Cancelled => KError::Cancelled.to_rc(),
-            WaitSynchronizationError::OutOfRange => KError::OutOfRange.to_rc(),
-            WaitSynchronizationError::Unknown(err) => err.to_raw(),
+            WaitSyncError::InvalidHandle => KError::InvalidHandle.to_rc(),
+            WaitSyncError::TimedOut => KError::TimedOut.to_rc(),
+            WaitSyncError::Cancelled => KError::Cancelled.to_rc(),
+            WaitSyncError::OutOfRange => KError::OutOfRange.to_rc(),
+            WaitSyncError::Unknown(err) => err.to_raw(),
         }
     }
 }
