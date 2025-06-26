@@ -20,6 +20,7 @@ mod ffi;
 mod barrier;
 mod condvar;
 mod mutex;
+mod once;
 mod remutex;
 mod rwlock;
 mod semaphore;
@@ -44,6 +45,6 @@ use panic_halt as _;
 
 #[doc(inline)]
 pub use self::{
-    barrier::Barrier, condvar::Condvar, mutex::Mutex, remutex::ReentrantMutex, rwlock::RwLock,
-    semaphore::Semaphore,
+    barrier::Barrier, condvar::Condvar, mutex::Mutex, once::Once, remutex::ReentrantMutex,
+    rwlock::RwLock, semaphore::Semaphore,
 };
