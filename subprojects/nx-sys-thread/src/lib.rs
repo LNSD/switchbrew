@@ -21,11 +21,12 @@ use panic_abort as _;
 #[allow(unused_imports)]
 use panic_halt as _;
 
-#[allow(dead_code)] // TODO: Remove once it is used
+mod init;
 mod registry;
-
 mod thread_impl;
 pub mod tls;
+pub use init::*;
+pub use registry::*;
 pub use thread_impl::*;
 
 #[cfg(feature = "ffi")]
