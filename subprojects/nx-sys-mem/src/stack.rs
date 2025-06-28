@@ -1,12 +1,9 @@
 //! High-level helpers for Horizon OS stack memory management.
 
 use alloc::alloc::{Layout, alloc_zeroed, dealloc};
-use core::{ffi::c_void, ptr::NonNull};
+use core::{ffi::c_void, mem, ptr::NonNull};
 
-use nx_svc::{
-    debug::{BreakReason, break_event},
-    mem::core as svc,
-};
+use nx_svc::mem::core as svc;
 
 use crate::vmm::sys as vmm;
 
@@ -112,6 +109,19 @@ impl StackMemory<Mapped> {
         let StackMemory(Mapped { addr, .. }) = self;
         *addr
     }
+
+    /// Leak the mapped stack memory, preventing automatic cleanup.
+    ///
+    /// This method consumes the `StackMemory<Mapped>` and prevents its `Drop`
+    /// implementation from running, effectively transferring ownership to the
+    /// caller. The caller becomes responsible for manually cleaning up the
+    /// memory (typically via `threadClose()` or similar).
+    ///
+    /// This is useful when transferring stack ownership to a thread, where
+    /// the stack should persist beyond the scope of the creating function.
+    pub fn leak(self) {
+        mem::forget(self);
+    }
 }
 
 impl<S> Drop for StackMemory<S>
@@ -146,22 +156,18 @@ where
             return;
         }
 
-        // It is responsibiloty of the caller to unmap the buffer before dropping.
-        // If the buffer is mapped, panic in debug mode, otherwise do nothing.
+        // If the buffer is still mapped, automatically unmap it first.
+        // This is safer and more idiomatic than panicking or leaking.
         if self.0.is_mapped() {
-            #[cfg(not(debug_assertions))]
-            {
-                return;
-            }
-            #[cfg(debug_assertions)]
-            {
-                // TODO: Panic with a more descriptive error message.
-                break_event(BreakReason::Panic, 0, 0);
+            // Get the mapped state to perform the unmap
+            if let Some(addr) = self.0.get_addr() {
+                // Attempt to unmap the memory
+                let _ =
+                    svc::unmap_memory(addr.as_ptr(), self.0.backing_ptr().as_ptr(), self.0.size());
             }
         }
 
-        // If we own the backing buffer and it is *not* mapped anymore,
-        // free the pages.
+        // Free the backing buffer if we own it.
         //
         // SAFETY: `backing` was allocated with `alloc_owned` using the same
         // layout (size, 4 KiB alignment), so freeing with that layout is
