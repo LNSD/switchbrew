@@ -16,7 +16,7 @@ use nx_svc::{
 use crate::{
     registry,
     thread_impl::{Thread, ThreadStackMem},
-    tls::{self, USER_TLS_BEGIN},
+    tls_region,
 };
 
 unsafe extern "C" {
@@ -127,8 +127,7 @@ pub unsafe fn init_main_thread() {
 
         // Compute the base address of the dynamic TLS slot array (TLS + 0x108).
         // This matches the C implementation's calculation of tls_array.
-        let tls_slot_ptr =
-            unsafe { (tls::get_ptr() as *mut u8).add(USER_TLS_BEGIN) as *mut *mut c_void };
+        let tls_slot_ptr = tls_region::slots_ptr().as_ptr();
 
         Thread {
             handle,
@@ -154,6 +153,6 @@ pub unsafe fn init_main_thread() {
     // This ensures threadGetSelf() and related APIs work correctly.
     // SAFETY: thread_vars_ptr() returns a valid pointer to the current thread's
     // ThreadVars structure in TLS, and main_thread_ptr is valid.
-    let tv = unsafe { &mut *tls::thread_vars_ptr() };
+    let tv = unsafe { &mut *tls_region::thread_vars_ptr() };
     tv.thread_info_ptr = main_thread_ptr as *const _ as *mut c_void;
 }

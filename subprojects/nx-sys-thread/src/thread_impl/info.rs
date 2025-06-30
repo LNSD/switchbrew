@@ -5,7 +5,7 @@ use core::{
 
 use nx_svc::thread::Handle;
 
-use crate::tls;
+use crate::tls_region;
 
 /// Thread information structure
 pub struct Thread {
@@ -105,11 +105,11 @@ impl ThreadStackMem {
 /// * The caller is responsible for ensuring that aliasing rules are not
 ///   violated when creating references from the raw pointer.
 pub fn get_current_thread_info_ptr() -> *mut Thread {
-    let tls_ptr = tls::thread_vars_ptr();
+    let tv_ptr = tls_region::thread_vars_ptr();
 
     // SAFETY: The current thread's information is stored in the TLS.
     // Use `read_volatile` to avoid the compiler re-ordering or eliminating the read.
-    unsafe { ptr::read_volatile(&raw const (*tls_ptr).thread_info_ptr) as *mut Thread }
+    unsafe { ptr::read_volatile(&raw const (*tv_ptr).thread_info_ptr) as *mut Thread }
 }
 
 /// Returns the [`Handle`] of the calling thread.
@@ -127,9 +127,9 @@ pub fn get_current_thread_info_ptr() -> *mut Thread {
 /// stored in the thread's TLS block and returns a copy. No shared mutable
 /// state is accessed and no invariants can be violated.
 pub fn get_current_thread_handle() -> Handle {
-    let tls_ptr = tls::thread_vars_ptr();
+    let tv_ptr = tls_region::thread_vars_ptr();
 
     // SAFETY: The current thread's handle is stored in the TLS.
     // Use `read_volatile` to avoid the compiler re-ordering or eliminating the read.
-    unsafe { ptr::read_volatile(&raw const (*tls_ptr).handle) }
+    unsafe { ptr::read_volatile(&raw const (*tv_ptr).handle) }
 }

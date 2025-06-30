@@ -32,7 +32,7 @@ unsafe extern "C" fn __nx_sys_thread_tls_set(slot_id: i32, value: *mut c_void) {
 mod newlib {
     use core::{ffi::c_void, ptr};
 
-    use crate::{thread_impl as sys, tls::NUM_TLS_SLOTS};
+    use crate::{thread_impl as sys, tls_region::NUM_TLS_SLOTS};
 
     /// POSIX constant for `EINVAL` (invalid argument).
     /// Mirrors the value used by newlib on Horizon (22).

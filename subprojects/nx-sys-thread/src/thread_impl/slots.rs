@@ -8,7 +8,7 @@
 
 use core::{ffi::c_void, ptr, slice};
 
-use crate::tls::{self, NUM_TLS_SLOTS, USER_TLS_BEGIN};
+use crate::tls_region::{self, NUM_TLS_SLOTS};
 
 /// Reads the raw pointer stored in the dynamic TLS slot with the given `slot_id`.
 ///
@@ -65,13 +65,10 @@ pub unsafe fn slot_set(slot_id: usize, value: *mut c_void) {
 /// * The caller must ensure the returned slice is not aliased mutably elsewhere.
 #[inline(always)]
 unsafe fn slots() -> &'static [*mut c_void] {
-    let tls_ptr = tls::get_ptr();
+    let slots_ptr = tls_region::slots_ptr();
 
     // SAFETY: The caller must ensure the returned slice is not aliased mutably elsewhere.
-    unsafe {
-        let slots_ptr = tls_ptr.add(USER_TLS_BEGIN);
-        slice::from_raw_parts(slots_ptr as *mut *mut c_void, NUM_TLS_SLOTS)
-    }
+    unsafe { slice::from_raw_parts(slots_ptr.as_ptr(), NUM_TLS_SLOTS) }
 }
 
 /// Returns a mutable slice covering the dynamic TLS slot array for the **current thread**.
@@ -83,11 +80,8 @@ unsafe fn slots() -> &'static [*mut c_void] {
 /// * The caller must ensure the returned slice is not aliased mutably elsewhere.
 #[inline(always)]
 unsafe fn slots_mut() -> &'static mut [*mut c_void] {
-    let tls_ptr = tls::get_ptr();
+    let slots_ptr = tls_region::slots_ptr();
 
     // SAFETY: The caller must ensure the returned slice is not aliased mutably elsewhere.
-    unsafe {
-        let slots_ptr = tls_ptr.add(USER_TLS_BEGIN);
-        slice::from_raw_parts_mut(slots_ptr as *mut *mut c_void, NUM_TLS_SLOTS)
-    }
+    unsafe { slice::from_raw_parts_mut(slots_ptr.as_ptr(), NUM_TLS_SLOTS) }
 }

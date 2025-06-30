@@ -6,7 +6,10 @@
 
 use core::ffi::c_void;
 
-use crate::tls::{self, ThreadVars};
+use crate::{
+    tls_block,
+    tls_region::{self, ThreadVars},
+};
 
 /// Gets the thread-local storage (TLS) buffer.
 ///
@@ -16,13 +19,13 @@ use crate::tls::{self, ThreadVars};
 /// Returns a pointer to the thread-local storage buffer.
 #[unsafe(no_mangle)]
 unsafe extern "C" fn __nx_sys_thread_get_ptr() -> *mut c_void {
-    tls::get_ptr()
+    tls_region::get_ptr()
 }
 
 /// Returns a mutable reference to the `ThreadVars` structure for the current thread.
 #[unsafe(no_mangle)]
 unsafe extern "C" fn __nx_sys_thread_get_thread_vars() -> *mut ThreadVars {
-    tls::thread_vars_ptr()
+    tls_region::thread_vars_ptr()
 }
 
 /// Returns the start offset (in bytes) of the initialised TLS data (`.tdata`/`.tbss`) within a
@@ -30,5 +33,5 @@ unsafe extern "C" fn __nx_sys_thread_get_thread_vars() -> *mut ThreadVars {
 /// implementation.
 #[unsafe(no_mangle)]
 unsafe extern "C" fn __nx_sys_thread_get_tls_start_offset() -> usize {
-    tls::static_tls_data_start_offset()
+    tls_block::tdata::start_offset()
 }
