@@ -1,19 +1,20 @@
 use core::{ffi::c_void, ptr};
 
-use crate::thread_impl as sys;
+use crate::slots;
 
 /// Reads the raw pointer stored in the dynamic TLS slot `slot_id`.
 ///
 /// Mirrors `threadTlsGet` in libnx's C API.
 #[unsafe(no_mangle)]
 unsafe extern "C" fn __nx_sys_thread_tls_get(slot_id: i32) -> *mut c_void {
-    // Negative indices are treated as out-of-bounds and return null, matching C UB-avoidance.
     if slot_id < 0 {
         return ptr::null_mut();
     }
-    // SAFETY: Cast is safe because slot_id is non-negative; additional bounds checks are
-    // performed inside `slot_get` when debug assertions are enabled.
-    unsafe { sys::slot_get(slot_id as usize) }
+
+    match unsafe { slots::curr_thread_slot_get(slot_id as usize) } {
+        Ok(value) => value,
+        Err(_) => ptr::null_mut(),
+    }
 }
 
 /// Writes `value` into dynamic TLS slot `slot_id`.
@@ -25,14 +26,13 @@ unsafe extern "C" fn __nx_sys_thread_tls_set(slot_id: i32, value: *mut c_void) {
         return; // Silently ignore invalid negative indices to match common C semantics.
     }
 
-    // SAFETY: Same considerations as in `__nx_sys_thread_tls_get`.
-    unsafe { sys::slot_set(slot_id as usize, value) };
+    let _ = unsafe { slots::curr_thread_slot_set(slot_id as usize, value) };
 }
 
 mod newlib {
     use core::{ffi::c_void, ptr};
 
-    use crate::{thread_impl as sys, tls_region::NUM_TLS_SLOTS};
+    use crate::slots;
 
     /// POSIX constant for `EINVAL` (invalid argument).
     /// Mirrors the value used by newlib on Horizon (22).
@@ -49,14 +49,10 @@ mod newlib {
         key: u32,
         value: *const c_void,
     ) -> i32 {
-        if (key as usize) >= NUM_TLS_SLOTS {
-            return EINVAL;
+        match unsafe { slots::curr_thread_slot_set(key as usize, value as *mut c_void) } {
+            Ok(_) => 0,
+            Err(_) => EINVAL,
         }
-
-        // SAFETY: Bounds were checked above; we cast away constness because TLS stores a mutable
-        // pointer value. The pointer itself may point to immutable data.
-        unsafe { sys::slot_set(key as usize, value as *mut c_void) };
-        0 // success
     }
 
     /// Rust implementation of `pthread_getspecific` that libgloss/newlib expects.
@@ -64,11 +60,9 @@ mod newlib {
     /// Returns the stored pointer or NULL if `key` is out of range.
     #[unsafe(no_mangle)]
     unsafe extern "C" fn __nx_sys_thread_newlib_pthread_getspecific(key: u32) -> *mut c_void {
-        if (key as usize) >= NUM_TLS_SLOTS {
-            return ptr::null_mut();
+        match unsafe { slots::curr_thread_slot_get(key as usize) } {
+            Ok(value) => value,
+            Err(_) => ptr::null_mut(),
         }
-
-        // SAFETY: Bounds were checked above.
-        unsafe { sys::slot_get(key as usize) }
     }
 }

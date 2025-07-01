@@ -114,15 +114,6 @@ pub const USER_TLS_REGION_BEGIN: usize = 0x108;
 /// End of the user-mode TLS region.
 pub const USER_TLS_REGION_END: usize = TLS_REGION_SIZE - THREAD_VARS_SIZE;
 
-/// The number of slots in the TLS region.
-///
-/// The TLS region is divided into slots of size `core::mem::size_of::<*mut c_void>()`.
-///
-/// The number of slots is calculated as the difference between the end and the beginning
-/// of the user-mode TLS region, divided by the size of the slot.
-pub const NUM_TLS_SLOTS: usize =
-    (USER_TLS_REGION_END - USER_TLS_REGION_BEGIN) / size_of::<*mut c_void>();
-
 /// Size of the ThreadVars structure  
 ///
 /// The [`ThreadVars`] structure is exactly 32 bytes (0x20) long and is stored at the end

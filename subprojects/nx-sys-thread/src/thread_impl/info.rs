@@ -5,7 +5,10 @@ use core::{
 
 use nx_svc::thread::Handle;
 
-use crate::tls_region;
+use crate::{
+    slots::{SlotError, Slots},
+    tls_region,
+};
 
 /// Thread information structure
 pub struct Thread {
@@ -15,10 +18,35 @@ pub struct Thread {
     /// Stack memory information.
     pub stack_mem: ThreadStackMem,
 
-    /// Pointer to the TLS slot array.
-    pub tls_slot_ptr: *mut *mut c_void,
+    /// TLS slots.
+    pub tls_slots: Option<Slots>,
 }
 
+impl Thread {
+    /// Gets a TLS slot value.
+    pub fn slot_get(&self, mod_id: usize) -> Result<*mut c_void, SlotGetError> {
+        let Some(slots) = self.tls_slots.as_ref() else {
+            return Err(SlotGetError::ThreadNotInitialized);
+        };
+
+        match slots.get(mod_id) {
+            Ok(value) => Ok(value),
+            Err(SlotError::OutOfBounds(mod_id)) => Err(SlotGetError::OutOfBounds(mod_id)),
+        }
+    }
+
+    /// Sets a TLS slot to the given value.
+    pub fn slot_set(&mut self, mod_id: usize, value: *mut c_void) -> Result<(), SlotSetError> {
+        let Some(slots) = self.tls_slots.as_mut() else {
+            return Err(SlotSetError::ThreadNotInitialized);
+        };
+
+        match slots.set(mod_id, value) {
+            Ok(()) => Ok(()),
+            Err(SlotError::OutOfBounds(mod_id)) => Err(SlotSetError::OutOfBounds(mod_id)),
+        }
+    }
+}
 /// Thread stack memory information
 pub enum ThreadStackMem {
     /// The stack memory is owned by the thread.
@@ -132,4 +160,24 @@ pub fn get_current_thread_handle() -> Handle {
     // SAFETY: The current thread's handle is stored in the TLS.
     // Use `read_volatile` to avoid the compiler re-ordering or eliminating the read.
     unsafe { ptr::read_volatile(&raw const (*tv_ptr).handle) }
+}
+
+/// Error type for getting a thread's TLS slot value.
+#[derive(Debug, thiserror::Error)]
+pub enum SlotGetError {
+    #[error("Thread not initialized")]
+    ThreadNotInitialized,
+
+    #[error("Mod index out of bounds: {0}")]
+    OutOfBounds(usize),
+}
+
+/// Error type for setting a thread's TLS slot value.
+#[derive(Debug, thiserror::Error)]
+pub enum SlotSetError {
+    #[error("Thread not initialized")]
+    ThreadNotInitialized,
+
+    #[error("Mod index out of bounds: {0}")]
+    OutOfBounds(usize),
 }

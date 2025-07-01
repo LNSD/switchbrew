@@ -15,6 +15,7 @@ use nx_svc::{
 
 use crate::{
     registry,
+    slots::Slots,
     thread_impl::{Thread, ThreadStackMem},
     tls_region,
 };
@@ -125,14 +126,14 @@ pub unsafe fn init_main_thread() {
             ThreadStackMem::new_provided(stack_mem_ptr, stack_mem_size)
         };
 
-        // Compute the base address of the dynamic TLS slot array (TLS + 0x108).
-        // This matches the C implementation's calculation of tls_array.
-        let tls_slot_ptr = tls_region::slots_ptr().as_ptr();
+        // SAFETY: The TLS slots are always available for the main thread, and not
+        // aliased mutably elsewhere.
+        let tls_slots = unsafe { Slots::from_ptr(tls_region::slots_ptr()) };
 
         Thread {
             handle,
             stack_mem,
-            tls_slot_ptr,
+            tls_slots: Some(tls_slots),
         }
     };
 
