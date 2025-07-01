@@ -12,7 +12,7 @@ use nx_svc::{
     debug::{BreakReason, break_event},
     thread as svc,
 };
-use nx_sys_mem::stack::{self as stack_mem, StackMemory, Unmapped};
+use nx_sys_mem::stack::{self as stack_mem, Mapped, StackMemory, Unmapped};
 
 use super::info::{Thread, ThreadStackMem};
 use crate::{registry, slots::Slots, tls_block, tls_region};
@@ -115,8 +115,9 @@ pub fn create(
             let total_size = stack_sz + tls_sz + reent_sz;
 
             // Create StackMemory from provided memory
-            let stack_mem =
-                unsafe { StackMemory::<Unmapped>::from_raw(provided_stack.as_ptr(), total_size)? };
+            let stack_mem = unsafe {
+                StackMemory::<Unmapped>::from_raw_parts(provided_stack.as_ptr(), total_size)?
+            };
             (stack_mem, effective_sz)
         }
         None => {
@@ -269,6 +270,61 @@ pub unsafe fn exit(thread: &mut Thread) -> ! {
     svc::exit();
 }
 
+pub unsafe fn close(thread: &mut Thread) -> Result<(), ThreadCloseError> {
+    if thread.tls_slots.is_some() {
+        return Err(ThreadCloseError::ThreadNotExited);
+    }
+
+    let reent_sz = (REENT_SIZE + 0xF) & !0xF;
+    let tls_sz = (tls_block::size() + 0xF) & !0xF;
+
+    let aligned_stack_size =
+        (thread.stack_mem.size() + size_of::<ThreadEntryArgs>() + tls_sz + reent_sz + 0xFFF)
+            & !0xFFF;
+
+    let mapped_stack_mem = unsafe {
+        match thread.stack_mem {
+            ThreadStackMem::Owned { mem, mirror, .. } => {
+                let backing_ptr = mem;
+                let mirror_ptr = mirror;
+                let is_owned = true;
+
+                StackMemory::<Mapped>::from_raw_parts(
+                    backing_ptr,
+                    aligned_stack_size,
+                    is_owned,
+                    mirror_ptr,
+                )
+            }
+            ThreadStackMem::Provided { mirror, .. } => {
+                let backing_ptr = mirror;
+                let is_owned = false;
+
+                StackMemory::<Mapped>::from_raw_parts(
+                    backing_ptr,
+                    aligned_stack_size,
+                    is_owned,
+                    mirror,
+                )
+            }
+        }
+    };
+
+    // Unmap the stack memory. If it's owned, the resulting `Unmapped`
+    // object will be dropped, and the memory will be deallocated.
+    let unmap_result =
+        unsafe { stack_mem::unmap(mapped_stack_mem) }.map_err(ThreadCloseError::UnmapError)?;
+
+    // Release the unmapped stack memory. If it's owned, the memory will be
+    // deallocated.
+    drop(unmap_result);
+
+    // Close the thread handle
+    svc::close_handle(thread.handle).map_err(ThreadCloseError::CloseHandleError)?;
+
+    Ok(())
+}
+
 /// Thread creation errors
 #[derive(Debug, thiserror::Error)]
 pub enum ThreadCreateError {
@@ -338,4 +394,24 @@ pub enum ThreadCreateError {
     /// - Permission issues
     #[error("Thread creation failed: {0}")]
     SvcCreateThread(#[from] svc::CreateThreadError),
+}
+
+/// Errors that can occur when closing a thread.
+#[derive(Debug, thiserror::Error)]
+pub enum ThreadCloseError {
+    /// The thread has not exited yet and cannot be closed.
+    #[error("Thread has not exited")]
+    ThreadNotExited,
+
+    /// The thread's stack memory backing pointer is missing.
+    #[error("Thread's stack memory backing pointer is missing")]
+    BackingPointerMissing,
+
+    /// An error occurred while unmapping thread's stack memory.
+    #[error("Failed to unmap stack memory: {0}")]
+    UnmapError(stack_mem::UnmapError),
+
+    /// An error occurred while closing thread's handle.
+    #[error("Failed to close thread handle: {0}")]
+    CloseHandleError(svc::CloseHandleError),
 }
