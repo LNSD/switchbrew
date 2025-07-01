@@ -6,7 +6,7 @@
 //!
 //! [`wait_thread_exit`]: crate::wait_thread_exit
 
-use nx_svc::error::ToRawResultCode;
+use nx_svc::{error::ToRawResultCode, sync as svc};
 
 use crate::thread_impl as sys;
 
@@ -22,5 +22,14 @@ pub unsafe extern "C" fn __nx_sys_thread_wait_for_exit(t: *const sys::Thread) ->
     // SAFETY: The caller is responsible for ensuring `t` is non-null and valid.
     let thread = unsafe { &*t };
 
-    sys::wait_thread_exit(thread).map_or_else(|err| err.to_rc(), |_| 0)
+    sys::wait_thread_exit(thread).map_or_else(
+        |err| match err {
+            sys::WaitForExitError::InvalidHandle => svc::WaitSyncError::InvalidHandle.to_rc(),
+            sys::WaitForExitError::Cancelled => svc::WaitSyncError::Cancelled.to_rc(),
+            sys::WaitForExitError::TimedOut => svc::WaitSyncError::TimedOut.to_rc(),
+            sys::WaitForExitError::OutOfRange => svc::WaitSyncError::OutOfRange.to_rc(),
+            sys::WaitForExitError::Unknown(err) => err.to_raw(),
+        },
+        |_| 0,
+    )
 }

@@ -78,7 +78,7 @@ const REENT_SIZE: usize = 352;
 /// * `cpuid` - CPU core ID (0~3, or -2 for default)
 ///
 /// Returns `Ok(())` on success, `Err(ThreadCreateError)` on failure.
-pub fn create(
+pub unsafe fn create(
     thread: &mut Thread,
     entrypoint: ThreadFunc,
     arg: *mut c_void,

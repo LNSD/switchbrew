@@ -1,6 +1,6 @@
 //! FFI bindings for the thread activity API.
 
-use nx_svc::error::ToRawResultCode;
+use nx_svc::{error::ToRawResultCode, thread as svc};
 
 use crate::thread_impl as sys;
 
@@ -14,7 +14,13 @@ pub unsafe extern "C" fn __nx_sys_thread_start(t: *const sys::Thread) -> u32 {
     // SAFETY: The caller must ensure that `t` is non-null.
     let thread = unsafe { &*t };
 
-    sys::start(thread).map_or_else(|err| err.to_rc(), |_| 0)
+    sys::start(thread).map_or_else(
+        |err| match err {
+            sys::ThreadStartError::InvalidHandle => svc::StartThreadError::InvalidHandle.to_rc(),
+            sys::ThreadStartError::Unknown(err) => err.to_rc(),
+        },
+        |_| 0,
+    )
 }
 
 /// Pauses the execution of a thread.
@@ -27,7 +33,13 @@ pub unsafe extern "C" fn __nx_sys_thread_pause(t: *const sys::Thread) -> u32 {
     // SAFETY: The caller must ensure that `t` is non-null.
     let thread = unsafe { &*t };
 
-    sys::pause(thread).map_or_else(|err| err.to_rc(), |_| 0)
+    sys::pause(thread).map_or_else(
+        |err| match err {
+            sys::ThreadPauseError::InvalidHandle => svc::PauseThreadError::InvalidHandle.to_rc(),
+            sys::ThreadPauseError::Unknown(err) => err.to_rc(),
+        },
+        |_| 0,
+    )
 }
 
 /// Resumes the execution of a previously paused thread.
@@ -40,5 +52,11 @@ pub unsafe extern "C" fn __nx_sys_thread_resume(t: *const sys::Thread) -> u32 {
     // SAFETY: The caller must ensure that `t` is non-null.
     let thread = unsafe { &*t };
 
-    sys::resume(thread).map_or_else(|err| err.to_rc(), |_| 0)
+    sys::resume(thread).map_or_else(
+        |err| match err {
+            sys::ThreadResumeError::InvalidHandle => svc::ResumeThreadError::InvalidHandle.to_rc(),
+            sys::ThreadResumeError::Unknown(err) => err.to_rc(),
+        },
+        |_| 0,
+    )
 }

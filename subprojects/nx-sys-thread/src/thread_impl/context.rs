@@ -152,13 +152,3 @@ impl From<svc::GetContext3Error> for DumpContextError {
         }
     }
 }
-
-#[cfg(feature = "ffi")]
-impl nx_svc::error::ToRawResultCode for DumpContextError {
-    fn to_rc(self) -> nx_svc::error::ResultCode {
-        match self {
-            Self::InvalidHandle => svc::GetContext3Error::InvalidHandle.to_rc(),
-            Self::Unknown(err) => err.to_rc(),
-        }
-    }
-}

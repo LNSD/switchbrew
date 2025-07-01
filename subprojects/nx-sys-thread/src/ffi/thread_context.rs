@@ -9,7 +9,7 @@
 //! re-declared here with a `#[repr(C)]` layout so they can be consumed from C
 //! code directly.
 
-use nx_svc::error::ToRawResultCode;
+use nx_svc::{error::ToRawResultCode, thread as svc};
 
 use crate::thread_impl as sys;
 
@@ -33,7 +33,10 @@ pub unsafe extern "C" fn __nx_sys_thread_dump_context(
             unsafe { ctx.write(sys_ctx.into()) };
             0
         }
-        Err(err) => err.to_rc(),
+        Err(err) => match err {
+            sys::DumpContextError::InvalidHandle => svc::GetContext3Error::InvalidHandle.to_rc(),
+            sys::DumpContextError::Unknown(err) => err.to_rc(),
+        },
     }
 }
 

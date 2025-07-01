@@ -119,16 +119,3 @@ impl From<WaitSyncError> for WaitForExitError {
         }
     }
 }
-
-#[cfg(feature = "ffi")]
-impl nx_svc::error::ToRawResultCode for WaitForExitError {
-    fn to_rc(self) -> nx_svc::result::ResultCode {
-        match self {
-            WaitForExitError::InvalidHandle => WaitSyncError::InvalidHandle.to_rc(),
-            WaitForExitError::Cancelled => WaitSyncError::Cancelled.to_rc(),
-            WaitForExitError::TimedOut => WaitSyncError::TimedOut.to_rc(),
-            WaitForExitError::OutOfRange => WaitSyncError::OutOfRange.to_rc(),
-            WaitForExitError::Unknown(err) => err.to_raw(),
-        }
-    }
-}

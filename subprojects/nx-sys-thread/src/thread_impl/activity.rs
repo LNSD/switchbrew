@@ -62,16 +62,6 @@ impl From<svc::StartThreadError> for ThreadStartError {
     }
 }
 
-#[cfg(feature = "ffi")]
-impl nx_svc::error::ToRawResultCode for ThreadStartError {
-    fn to_rc(self) -> nx_svc::error::ResultCode {
-        match self {
-            Self::InvalidHandle => svc::StartThreadError::InvalidHandle.to_rc(),
-            Self::Unknown(err) => err.to_rc(),
-        }
-    }
-}
-
 /// Temporarily pauses the scheduler for the given [`Thread`].
 ///
 /// The kernel will stop running the target thread until [`resume`] is
@@ -107,16 +97,6 @@ impl From<svc::PauseThreadError> for ThreadPauseError {
     }
 }
 
-#[cfg(feature = "ffi")]
-impl nx_svc::error::ToRawResultCode for ThreadPauseError {
-    fn to_rc(self) -> nx_svc::error::ResultCode {
-        match self {
-            Self::InvalidHandle => svc::PauseThreadError::InvalidHandle.to_rc(),
-            Self::Unknown(err) => err.to_rc(),
-        }
-    }
-}
-
 /// Resumes execution of a previously paused [`Thread`].
 pub fn resume(thread: &Thread) -> Result<(), ThreadResumeError> {
     svc::resume(thread.handle).map_err(Into::into)
@@ -144,16 +124,6 @@ impl From<svc::ResumeThreadError> for ThreadResumeError {
         match value {
             svc::ResumeThreadError::InvalidHandle => ThreadResumeError::InvalidHandle,
             svc::ResumeThreadError::Unknown(err) => ThreadResumeError::Unknown(err),
-        }
-    }
-}
-
-#[cfg(feature = "ffi")]
-impl nx_svc::error::ToRawResultCode for ThreadResumeError {
-    fn to_rc(self) -> nx_svc::error::ResultCode {
-        match self {
-            Self::InvalidHandle => svc::ResumeThreadError::InvalidHandle.to_rc(),
-            Self::Unknown(err) => err.to_rc(),
         }
     }
 }
