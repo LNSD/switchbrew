@@ -23,6 +23,16 @@ pub struct Thread {
 }
 
 impl Thread {
+    pub fn new(handle: Handle, stack_mem: ThreadStackMem) -> Self {
+        Self {
+            handle,
+            stack_mem,
+            tls_slots: None,
+        }
+    }
+}
+
+impl Thread {
     /// Gets a TLS slot value.
     pub fn slot_get(&self, mod_id: usize) -> Result<*mut c_void, SlotGetError> {
         let Some(slots) = self.tls_slots.as_ref() else {

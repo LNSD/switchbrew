@@ -200,6 +200,142 @@ pub unsafe fn create(
     Ok(())
 }
 
+pub enum StackMem {
+    External { mem: NonNull<c_void>, size: usize },
+    Allocate { size: usize },
+}
+
+impl StackMem {
+    pub fn new_external(mem: NonNull<c_void>, size: usize) -> Self {
+        Self::External { mem, size }
+    }
+
+    pub fn new_allocate(size: usize) -> Self {
+        Self::Allocate { size }
+    }
+}
+
+pub unsafe fn create_thread(
+    entry_fn: ThreadFunc,
+    entry_args: *mut c_void,
+    stack_mem: StackMem,
+    prio: i32,
+    cpuid: i32,
+) -> Result<Thread, ThreadCreateError> {
+    // Calculate sizes for reent and TLS, aligned to 16 bytes
+    // This matches the C implementation: (sizeof(struct _reent)+0xF) &~ 0xF
+    let reent_sz = (REENT_SIZE + 0xF) & !0xF;
+    let tls_sz = (tls_block::size() + 0xF) & !0xF;
+
+    let (stack_memory, effective_stack_sz) = match stack_mem {
+        StackMem::External { mem, size } => {
+            // Verify stack size alignment
+            if size & (PAGE_SIZE - 1) != 0 {
+                return Err(ThreadCreateError::InvalidStackSize);
+            }
+
+            // Using provided stack memory
+            if mem.as_ptr() as usize & (PAGE_SIZE - 1) != 0 {
+                return Err(ThreadCreateError::InvalidStackAlignment);
+            }
+
+            // Ensure we don't go out of bounds
+            let align_mask = tls_block::tdata::start_offset() - 1;
+            let needed_sz = (tls_sz + reent_sz + align_mask) & !align_mask;
+            if size <= needed_sz + size_of::<ThreadEntryArgs>() {
+                return Err(ThreadCreateError::StackTooSmall);
+            }
+
+            let effective_sz = size - needed_sz;
+            let total_size = size + tls_sz + reent_sz;
+
+            // Create StackMemory from provided memory
+            let stack_mem =
+                unsafe { StackMemory::<Unmapped>::from_raw_parts(mem.as_ptr(), total_size)? };
+            (stack_mem, effective_sz)
+        }
+        StackMem::Allocate { size } => {
+            // Verify stack size alignment
+            if size & (PAGE_SIZE - 1) != 0 {
+                return Err(ThreadCreateError::InvalidStackSize);
+            }
+
+            // Allocate new memory for stack, TLS, and reent
+            let total_size = size + tls_sz + reent_sz;
+            let stack_mem = StackMemory::<Unmapped>::alloc_owned(total_size)?;
+            (stack_mem, size)
+        }
+    };
+
+    // Map the stack memory
+    let mapped_stack = unsafe { stack_mem::map(stack_memory)? };
+    let stack_mirror = mapped_stack.addr();
+
+    // Update the thread structure with stack information
+    let stack_mem = if mapped_stack.is_owned() {
+        ThreadStackMem::new_owned(mapped_stack.backing_ptr(), stack_mirror, effective_stack_sz)
+    } else {
+        ThreadStackMem::new_provided(stack_mirror, effective_stack_sz)
+    };
+
+    // Calculate memory layout
+    let stack_top = unsafe {
+        stack_mirror
+            .as_ptr()
+            .add(effective_stack_sz)
+            .sub(size_of::<ThreadEntryArgs>())
+    };
+    let tls_ptr = unsafe { stack_mirror.as_ptr().add(effective_stack_sz) };
+    let reent_ptr = unsafe { tls_ptr.add(tls_sz) };
+
+    // Set up thread entry arguments and write them to the top of the stack
+    let args_ptr = stack_top as *mut ThreadEntryArgs;
+    unsafe {
+        args_ptr.write(ThreadEntryArgs {
+            thread: ptr::null_mut(),
+            entrypoint: entry_fn,
+            arg: entry_args,
+            reent: reent_ptr as *mut c_void,
+            tls: tls_ptr as *mut c_void,
+            _pad: ptr::null_mut(),
+        })
+    };
+
+    // Create the kernel thread
+    let handle = svc::create(
+        thread_entrypoint_wrapper,
+        args_ptr,
+        stack_top as *mut c_void,
+        prio,
+        cpuid,
+    )?;
+
+    // Set up child thread's reent struct, inheriting standard file handles
+    unsafe {
+        ptr::write_bytes(reent_ptr, 0, reent_sz);
+
+        // TODO: Initialize the newlib reent structure and inherit file handles
+    }
+
+    // Set up child thread's TLS block
+    // - Copy the `.tdata` section into the TLS block (if any)
+    // - Initialize the `.tbss` section with zeros (if any)
+    let tls_data_start = tls_ptr;
+    let tls_data_size = tls_block::tdata::lma_size();
+    unsafe { tls_block::tdata::copy_nonoverlapping(tls_data_start, tls_data_size) };
+
+    let tls_bss_start = unsafe { tls_ptr.add(tls_data_size) };
+    let tls_bss_size = tls_sz - tls_data_size;
+    unsafe { tls_block::tbss::init_zeroed(tls_bss_start, tls_bss_size) };
+
+    // Success! Transfer ownership of the mapped stack to the thread.
+    // The stack memory will be cleaned up when the thread exits and
+    // threadClose() is called.
+    mapped_stack.leak();
+
+    Ok(Thread::new(handle, stack_mem))
+}
+
 /// Thread entrypoint wrapper function
 ///
 /// This is the actual thread entry point that:
