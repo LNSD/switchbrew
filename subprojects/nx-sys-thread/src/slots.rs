@@ -267,7 +267,6 @@ impl Slots {
     ///
     /// # Safety
     /// * The caller must ensure the returned slice is not aliased mutably elsewhere.
-    #[cfg(feature = "ffi")]
     pub unsafe fn from_ptr(addr: NonNull<*mut c_void>) -> Self {
         // SAFETY: The caller ensures the pointer is valid.
         unsafe { Self::from_raw_parts(addr, NUM_SLOTS) }
