@@ -11,7 +11,7 @@ mod thread_context;
 mod thread_create;
 mod thread_exit;
 mod thread_handle;
-mod thread_impl;
+mod thread_info;
 mod thread_inner;
 mod thread_pause;
 mod thread_resume;
@@ -23,7 +23,7 @@ pub mod tls_block;
 pub mod tls_region;
 pub use init::*;
 pub use registry::*;
-pub use thread_impl::*;
+pub use thread_handle::Thread;
 
 #[cfg(feature = "ffi")]
 mod ffi;
