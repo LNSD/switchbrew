@@ -11,10 +11,7 @@ use core::{ffi::c_void, ptr::NonNull};
 use intrusive_collections::{LinkedList, LinkedListLink, intrusive_adapter};
 use nx_rand::sys::next_u64;
 use nx_std_sync::mutex::{Mutex, MutexGuard};
-use nx_svc::{
-    debug::{BreakReason, break_event},
-    mem::{self, MemoryType, UnmapMemoryError},
-};
+use nx_svc::mem::{self, MemoryType, UnmapMemoryError};
 
 /// Global virtual memory manager
 pub(super) static VMM: Mutex<VirtmemManager> = Mutex::new(VirtmemManager::new_uninit());
@@ -263,8 +260,7 @@ impl VirtmemState {
 
         // Query memory properties
         let Ok((info, _)) = mem::query_memory(query_start) else {
-            // TODO: diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_BadQueryMemory));
-            break_event(BreakReason::Panic, 0, 0);
+            panic!("Failed to query memory: BAD_QUERY_MEMORY");
         };
 
         // Return true if there's anything mapped
@@ -302,10 +298,7 @@ fn init_state() -> VirtmemState {
     // The alias region
     let alias_region = {
         let (alias_region_start, mut alias_region_size) = nx_svc::misc::get_alias_region_info()
-            .unwrap_or_else(|_| {
-                // TODO: diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_WeirdKernel));
-                break_event(BreakReason::Panic, 0, 0);
-            });
+            .expect("Failed to get alias region info: WEIRD_KERNEL");
 
         // Account for the alias region extra size.
         if let Ok(extra) = nx_svc::misc::get_alias_region_extra_size() {
@@ -318,10 +311,7 @@ fn init_state() -> VirtmemState {
     // Reserve the heap region
     let heap_region = {
         let (heap_region_start, heap_region_size) = nx_svc::misc::get_heap_region_info()
-            .unwrap_or_else(|_| {
-                // TODO: diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_BadGetInfo_Heap));
-                break_event(BreakReason::Panic, 0, 0);
-            });
+            .expect("Failed to get heap region info: BAD_GET_INFO_HEAP");
         MemRegion::new(heap_region_start, heap_region_start + heap_region_size)
     };
 
@@ -330,10 +320,7 @@ fn init_state() -> VirtmemState {
         // Modern kernels (2.0.0+) expose ASLR/stack info directly.
         Ok((aslr_region_start, aslr_region_size)) => {
             let (stack_region_start, stack_region_size) = nx_svc::misc::get_stack_region_info()
-                .unwrap_or_else(|_| {
-                    // TODO: diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_BadGetInfo_Stack));
-                    break_event(BreakReason::Panic, 0, 0);
-                });
+                .expect("Failed to get stack region info: BAD_GET_INFO_STACK");
 
             (
                 MemRegion::new(aslr_region_start, aslr_region_start + aslr_region_size),
@@ -373,8 +360,7 @@ fn init_state() -> VirtmemState {
 
                 // Should *never* succeed – treat as weird kernel
                 _ => {
-                    // TODO: diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_WeirdKernel));
-                    break_event(BreakReason::Panic, 0, 0);
+                    panic!("Unmap memory should not have succeeded: WEIRD_KERNEL");
                 }
             };
 

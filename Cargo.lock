@@ -45,8 +45,6 @@ dependencies = [
  "linked_list_allocator",
  "nx-svc",
  "nx-sys-sync",
- "panic-abort",
- "panic-halt",
  "thiserror",
 ]
 
@@ -54,8 +52,7 @@ dependencies = [
 name = "nx-cpu"
 version = "0.1.0"
 dependencies = [
- "panic-abort",
- "panic-halt",
+ "nx-svc",
 ]
 
 [[package]]
@@ -63,8 +60,6 @@ name = "nx-rand"
 version = "0.1.0"
 dependencies = [
  "nx-svc",
- "panic-abort",
- "panic-halt",
  "rand",
  "rand_chacha",
  "static_assertions",
@@ -83,8 +78,6 @@ dependencies = [
  "nx-sys-sync",
  "nx-sys-thread",
  "nx-time",
- "panic-abort",
- "panic-halt",
 ]
 
 [[package]]
@@ -93,8 +86,6 @@ version = "0.1.0"
 dependencies = [
  "nx-alloc",
  "nx-sys-sync",
- "panic-abort",
- "panic-halt",
  "thiserror",
 ]
 
@@ -104,8 +95,6 @@ version = "0.1.0"
 dependencies = [
  "nx-svc",
  "nx-sys-thread",
- "panic-abort",
- "panic-halt",
 ]
 
 [[package]]
@@ -113,8 +102,6 @@ name = "nx-svc"
 version = "0.1.0"
 dependencies = [
  "bitflags",
- "panic-abort",
- "panic-halt",
  "thiserror",
 ]
 
@@ -127,8 +114,6 @@ dependencies = [
  "nx-rand",
  "nx-std-sync",
  "nx-svc",
- "panic-abort",
- "panic-halt",
  "static_assertions",
  "thiserror",
 ]
@@ -139,8 +124,6 @@ version = "0.1.0"
 dependencies = [
  "nx-cpu",
  "nx-svc",
- "panic-abort",
- "panic-halt",
  "static_assertions",
 ]
 
@@ -154,8 +137,6 @@ dependencies = [
  "nx-std-sync",
  "nx-svc",
  "nx-time",
- "panic-abort",
- "panic-halt",
  "static_assertions",
  "thiserror",
 ]
@@ -165,23 +146,9 @@ name = "nx-time"
 version = "0.1.0"
 dependencies = [
  "nx-cpu",
- "panic-abort",
- "panic-halt",
  "static_assertions",
  "thiserror",
 ]
-
-[[package]]
-name = "panic-abort"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e20e6499bbbc412f280b04a42346b356c6fa0753d5fd22b7bd752ff34c778ee"
-
-[[package]]
-name = "panic-halt"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a513e167849a384b7f9b746e517604398518590a9142f4846a32e3c2a4de7b11"
 
 [[package]]
 name = "ppv-lite86"

@@ -11,5 +11,4 @@ doctest = false
 bench = false
 
 [dependencies]
-panic-abort = "0.3.2"
-panic-halt = "1.0.0"
+nx-svc = { version = "0.1.0", path = "../nx-svc" }

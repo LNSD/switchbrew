@@ -152,9 +152,7 @@ pub unsafe fn close(shm: SharedMemory<Unmapped>) -> Result<(), CloseError> {
     // of the shared memory object is guarded by the `create` function.
     #[cfg(debug_assertions)]
     if !handle.is_valid() {
-        use nx_svc::debug::{BreakReason, break_event};
-        // TODO: Add a better way to return the error to debugger
-        break_event(BreakReason::Assert, 0, 0);
+        panic!("Invalid shared memory handle: INVALID_SHMEM_HANDLE");
     }
 
     svc::close_handle(handle).map_err(|err| CloseError { reason: err, shm })

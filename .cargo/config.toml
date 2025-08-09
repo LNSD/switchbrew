@@ -28,3 +28,17 @@ build-std-features = ["compiler-builtins-mem"]
 # like `build-std`. It also allows passing unstable options to rustc.
 # See: https://doc.rust-lang.org/cargo/commands/cargo-build.html#output-options
 unstable-options = true
+
+# Compilation profiles configuration for Nintendo Switch homebrew.
+# These profiles are configured to work optimally with the freestanding
+# target and custom panic handler implementation.
+
+[profile.dev]
+# Use abort panic strategy for smaller binaries and compatibility with no_std environment.
+# This is required for custom panic handlers and the Nintendo Switch homebrew environment.
+panic = "abort"
+
+[profile.release]
+# Use abort panic strategy for smaller binaries and compatibility with no_std environment.
+# This is required for custom panic handlers and the Nintendo Switch homebrew environment.
+panic = "abort"

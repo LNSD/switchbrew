@@ -7,7 +7,6 @@
 use core::{alloc::Layout, ffi::c_char, ptr};
 
 use nx_svc::{
-    debug::{BreakReason, break_event},
     mem::set_heap_size,
     misc::{get_total_memory_size, get_used_memory_size},
 };
@@ -79,7 +78,7 @@ fn init_inner_heap() -> linked_list_allocator::Heap {
     let heap_bottom = match set_heap_size(heap_size) {
         Ok(heap_addr) => heap_addr as *mut c_char,
         Err(_) => {
-            break_event(BreakReason::Panic, 0, 0);
+            panic!("Failed to allocate heap memory: HEAP_ALLOCATION_FAILED");
         }
     };
 

@@ -13,10 +13,3 @@ members = [
     "subprojects/nx-sys-thread",
     "subprojects/nx-time",
 ]
-
-
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-panic = "abort"

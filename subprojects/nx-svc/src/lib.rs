@@ -1,4 +1,4 @@
-//! # nx-svc
+//! # nx-svcctu
 //!
 //! A Rust library for interacting with Horizon OS via _Supervisor Calls_ (SVCs).
 //!
@@ -11,19 +11,13 @@
 
 /// #[panic_handler]
 ///
-/// Use different panic handlers for debug and release builds.
-/// - 'dev': halt on panic. Easier to debug panics; can put a breakpoint on `rust_begin_unwind`
-/// - 'release': abort on panic. Minimal binary size.
+/// Custom panic handler that calls svcBreak with Panic reason.
+/// This provides better debugging information for Nintendo Switch homebrew applications.
 ///
 /// See:
 ///  - <https://doc.rust-lang.org/nomicon/panic-handler.html>
 ///  - <https://docs.rust-embedded.org/book/start/panicking.html>
-#[cfg(not(debug_assertions))]
-#[allow(unused_imports)]
-use panic_abort as _;
-#[cfg(debug_assertions)]
-#[allow(unused_imports)]
-use panic_halt as _;
+mod panic_handler;
 
 #[macro_use]
 mod handle;

@@ -18,6 +18,4 @@ ffi = []
 nx-svc = { version = "0.1.0", path = "../nx-svc" }
 rand = { version = "0.8", default-features = false }
 rand_chacha = { version = "0.3", default-features = false }
-panic-abort = "0.3.2"
-panic-halt = "1.0.0"
 static_assertions = "1.1.0" 

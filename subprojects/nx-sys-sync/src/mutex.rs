@@ -17,7 +17,6 @@
 use core::sync::atomic::{AtomicU32, Ordering};
 
 use nx_svc::{
-    debug::{BreakReason, break_event},
     raw::{Handle, INVALID_HANDLE},
     sync::{HANDLE_WAIT_MASK, arbitrate_lock, arbitrate_unlock},
 };
@@ -113,8 +112,7 @@ impl Mutex {
                     };
                     if arb_result.is_err() {
                         // This should never happen
-                        // TODO: Handle the arbitrate_lock errors
-                        break_event(BreakReason::Assert, 0, 0);
+                        panic!("Arbitrate lock failed: ARBITRATE_LOCK_ERROR");
                     }
 
                     // The arbitration has completed; check if we acquired the lock
@@ -186,8 +184,7 @@ impl Mutex {
                         unsafe {
                             if arbitrate_unlock(self.0.as_ptr()).is_err() {
                                 // This should never happen
-                                // TODO: Handle the arbitrate_lock errors
-                                break_event(BreakReason::Assert, 0, 0);
+                                panic!("Arbitrate unlock failed: ARBITRATE_UNLOCK_ERROR");
                             }
                         }
                         return;

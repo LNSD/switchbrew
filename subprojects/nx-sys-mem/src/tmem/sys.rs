@@ -240,9 +240,7 @@ pub unsafe fn close_handle(tm: TransferMemory<Unmapped>) -> Result<(), CloseErro
     // of the shared memory object is guarded by the `create` function.
     #[cfg(debug_assertions)]
     if !handle.is_valid() {
-        use nx_svc::debug::{BreakReason, break_event};
-        // TODO: Find a better way to return the error to debugger
-        break_event(BreakReason::Assert, 0, 0);
+        panic!("Invalid transfer memory handle: INVALID_TMEM_HANDLE");
     }
 
     svc::close_handle(handle).map_err(|err| CloseError { reason: err, tm })
@@ -262,9 +260,7 @@ pub unsafe fn close(tm: TransferMemory<Unmapped>) -> Result<(), CloseError> {
     // of the shared memory object is guarded by the `create` function.
     #[cfg(debug_assertions)]
     if !handle.is_valid() {
-        use nx_svc::debug::{BreakReason, break_event};
-        // TODO: Add a better way to return the error to debugger
-        break_event(BreakReason::Assert, 0, 0);
+        panic!("Invalid transfer memory handle: INVALID_TMEM_HANDLE");
     }
 
     svc::close_handle(handle).map_err(|err| CloseError { reason: err, tm })?;

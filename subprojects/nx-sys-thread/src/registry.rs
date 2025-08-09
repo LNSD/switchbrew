@@ -34,7 +34,6 @@
 use core::ptr::NonNull;
 
 use nx_std_sync::once_lock::OnceLock;
-use nx_svc::debug::{BreakReason, break_event};
 
 use crate::thread_impl::Thread;
 
@@ -63,9 +62,7 @@ static MAIN_THREAD: OnceLock<MainThread> = OnceLock::new();
 ///     process (it is stored globally and later returned by [`main_thread`]).
 pub unsafe fn set_main_thread(thread: Thread) {
     if MAIN_THREAD.set(MainThread::new(thread)).is_err() {
-        // TODO: Add a proper error message here.
-        // panic!("Main thread already set");
-        break_event(BreakReason::Panic, 0, 0);
+        panic!("Main thread already set: MAIN_THREAD_ALREADY_SET");
     }
 }
 
@@ -84,9 +81,7 @@ pub unsafe fn set_main_thread(thread: Thread) {
 ///   holding the returned shared reference; doing so is **undefined behaviour**.
 pub unsafe fn main_thread() -> &'static Thread {
     let Some(thread) = MAIN_THREAD.get() else {
-        // TODO: Add a proper error message here.
-        // panic!("Main thread not set");
-        break_event(BreakReason::Panic, 0, 0);
+        panic!("Main thread not set: MAIN_THREAD_NOT_SET");
     };
 
     thread
@@ -108,9 +103,7 @@ pub unsafe fn main_thread() -> &'static Thread {
 ///   reference. Creating aliasing references is **undefined behaviour**.
 pub unsafe fn main_thread_ptr() -> NonNull<Thread> {
     let Some(thread) = MAIN_THREAD.get() else {
-        // TODO: Add a proper error message here.
-        // panic!("Main thread not set");
-        break_event(BreakReason::Panic, 0, 0);
+        panic!("Main thread not set: MAIN_THREAD_NOT_SET");
     };
 
     NonNull::from(&thread.0)

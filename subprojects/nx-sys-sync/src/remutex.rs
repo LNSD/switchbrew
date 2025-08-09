@@ -30,10 +30,7 @@
 
 use core::cell::UnsafeCell;
 
-use nx_svc::{
-    debug::BreakReason,
-    raw::{Handle, INVALID_HANDLE},
-};
+use nx_svc::raw::{Handle, INVALID_HANDLE};
 
 use super::mutex::Mutex;
 use crate::tls;
@@ -122,7 +119,7 @@ impl ReentrantMutex {
             // Reentrant mutexes are not allowed to be unlocked by a thread that did not lock them.
             // This can lead to premature unlocking of the mutex, which can lead to undefined behavior.
             // This is undefined behavior in libnx, but we can catch it.
-            nx_svc::debug::break_event(BreakReason::Panic, 0, 0);
+            panic!("Thread attempted to unlock mutex it did not lock: MUTEX_UNLOCK_ERROR");
         }
 
         let counter = unsafe { &mut *self.counter.get() };

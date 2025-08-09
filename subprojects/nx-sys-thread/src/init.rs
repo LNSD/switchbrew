@@ -7,11 +7,7 @@
 
 use core::{ffi::c_void, ptr::NonNull};
 
-use nx_svc::{
-    debug::{BreakReason, break_event},
-    mem,
-    thread::Handle,
-};
+use nx_svc::{mem, thread::Handle};
 
 use crate::{
     registry,
@@ -104,19 +100,21 @@ pub unsafe fn init_main_thread() {
             // thread's stack boundaries.
             let stack_marker: u8 = 0;
 
-            let (stack_mem_base_addr, stack_mem_size) =
-                match mem::query_memory(&stack_marker as *const _ as usize) {
-                    Ok((mem_info, ..)) => (mem_info.addr, mem_info.size),
-                    Err(_) => {
-                        // Kernel memory query failed during initialization - this is fatal.
-                        // Use debug break instead of panic to avoid unwinding during startup.
-                        break_event(BreakReason::Panic, 0, 0);
-                    }
-                };
+            let (stack_mem_base_addr, stack_mem_size) = match mem::query_memory(
+                &stack_marker as *const _ as usize,
+            ) {
+                Ok((mem_info, ..)) => (mem_info.addr, mem_info.size),
+                Err(_) => {
+                    // Kernel memory query failed during initialization - this is fatal.
+                    panic!(
+                        "Kernel memory query failed during initialization: INIT_MEMORY_QUERY_FAILED"
+                    );
+                }
+            };
 
             let Some(stack_mem_ptr) = NonNull::new(stack_mem_base_addr as *mut _) else {
                 // Stack memory base address is null - this should never happen.
-                break_event(BreakReason::Assert, 0, 0);
+                panic!("Stack memory base address is null: NULL_STACK_BASE_ADDRESS");
             };
 
             // For the main thread, the stack memory is provided by the kernel and
