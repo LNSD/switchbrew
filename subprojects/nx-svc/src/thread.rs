@@ -335,3 +335,15 @@ pub fn yield_with_migration() {
 pub fn yield_to_any_thread() {
     unsafe { raw::sleep_thread(raw::YieldType::ToAnyThread as i64) }
 }
+
+/// Gets the current processor/CPU core number.
+///
+/// Returns the ID of the CPU core that the current thread is running on.
+/// The returned value is in the range 0..3 for the Switch's quad-core processor.
+///
+/// This is a safe wrapper around [`raw::get_current_processor_number`].
+pub fn get_current_processor_number() -> u32 {
+    // SAFETY: svcGetCurrentProcessorNumber is always safe to call and
+    // returns the current processor number without any side effects
+    unsafe { raw::get_current_processor_number() }
+}

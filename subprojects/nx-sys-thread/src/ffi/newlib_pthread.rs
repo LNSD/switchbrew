@@ -55,3 +55,12 @@ unsafe extern "C" fn __nx_sys_thread_newlib_sched_yield() -> c_int {
     sys::yield_with_migration();
     0
 }
+
+/// Overrides the `sched_getcpu` function from the C standard library.
+///
+/// This function is declared in `<sched.h>`.
+/// Corresponds to libgloss/libsysbase/pthread.c:1079
+#[unsafe(no_mangle)]
+unsafe extern "C" fn __nx_sys_thread_newlib_sched_getcpu() -> c_int {
+    sys::get_current_cpu() as c_int
+}
