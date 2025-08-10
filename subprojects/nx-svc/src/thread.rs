@@ -351,10 +351,14 @@ pub fn get_current_processor_number() -> u32 {
 /// Sets the CPU core affinity for a thread.
 ///
 /// This function configures which CPU cores the specified thread is allowed
-/// to run on and optionally which core it prefers using the type-safe
-/// [`CoreAffinity`] enum.
-pub fn set_core_mask(handle: Handle, affinity: CoreAffinity) -> Result<(), SetCoreMaskError> {
-    let (core_id, affinity_mask) = affinity.to_raw();
+/// to run on and optionally which core it prefers. You can pass either:
+/// - [`CoreAffinity`] - A type-safe enum with validation for common affinity configurations
+/// - [`RawCoreAffinity`] - A struct for passing raw values without validation
+pub fn set_core_mask(
+    handle: Handle,
+    affinity: impl IntoCoreAffinity,
+) -> Result<(), SetCoreMaskError> {
+    let (core_id, affinity_mask) = affinity.to_core_id_and_mask();
     let rc = unsafe { raw::set_thread_core_mask(handle.to_raw(), core_id, affinity_mask) };
     RawResult::from_raw(rc).map((), |rc| match rc.description() {
         desc if KError::InvalidHandle == desc => SetCoreMaskError::InvalidHandle,
@@ -386,16 +390,17 @@ pub enum CoreAffinity {
 
     /// Preserve the current preferred core and apply the new affinity mask.
     NoUpdate(NoUpdateCoreAffinity),
+}
 
-    /// Raw core affinity values without validation.
+/// Trait for types that can be converted into core affinity configurations.
+///
+/// This trait provides a way to convert various types into the (core_id, affinity_mask)
+/// tuple format expected by the underlying SVC calls.
+pub trait IntoCoreAffinity: _priv::Sealed {
+    /// Converts the type into a (core_id, affinity_mask) tuple.
     ///
-    /// This variant allows passing arbitrary core_id and affinity_mask values
-    /// directly to the underlying SVC without any validation. Use with caution
-    /// as invalid values may cause kernel errors.
-    ///
-    /// Only available when the `ffi` feature is enabled.
-    #[cfg(feature = "ffi")]
-    Raw(RawCoreAffinity),
+    /// Returns the same format as [`CoreAffinity::to_raw()`].
+    fn to_core_id_and_mask(self) -> (i32, u32);
 }
 
 impl CoreAffinity {
@@ -461,24 +466,10 @@ impl CoreAffinity {
     pub fn no_update(affinity_mask: u32) -> Result<CoreAffinity, InvalidAffinityMaskError> {
         NoUpdateCoreAffinity::try_new(affinity_mask).map(CoreAffinity::NoUpdate)
     }
+}
 
-    /// Creates a [`CoreAffinity`] with raw core_id and affinity_mask values without validation.
-    ///
-    /// This function allows passing arbitrary values directly to the underlying SVC
-    /// without any validation. Use with caution as invalid values may cause kernel errors.
-    ///
-    /// # Parameters
-    /// - `core_id`: Raw core ID value to pass to the SVC
-    /// - `affinity_mask`: Raw affinity mask value to pass to the SVC
-    ///
-    /// Only available when the `ffi` feature is enabled.
-    #[cfg(feature = "ffi")]
-    pub fn raw(core_id: i32, affinity_mask: u32) -> CoreAffinity {
-        CoreAffinity::Raw(RawCoreAffinity::new(core_id, affinity_mask))
-    }
-
-    /// Converts to the raw (core_id, affinity_mask) tuple expected by the SVC.
-    fn to_raw(self) -> (i32, u32) {
+impl IntoCoreAffinity for CoreAffinity {
+    fn to_core_id_and_mask(self) -> (i32, u32) {
         match self {
             CoreAffinity::Specific(SpecificCoreAffinity {
                 core,
@@ -487,14 +478,11 @@ impl CoreAffinity {
             CoreAffinity::Any(AnyCoreAffinity { affinity_mask }) => (-1, affinity_mask),
             CoreAffinity::ProcessDefault(_) => (-2, 0),
             CoreAffinity::NoUpdate(NoUpdateCoreAffinity { affinity_mask }) => (-3, affinity_mask),
-            #[cfg(feature = "ffi")]
-            CoreAffinity::Raw(RawCoreAffinity {
-                core_id,
-                affinity_mask,
-            }) => (core_id, affinity_mask),
         }
     }
 }
+
+impl _priv::Sealed for CoreAffinity {}
 
 /// Configuration for running a thread on a specific preferred core.
 ///
@@ -618,33 +606,39 @@ impl NoUpdateCoreAffinity {
     }
 }
 
-/// Configuration for raw core affinity values without validation.
+/// Raw core affinity configuration without validation.
 ///
-/// This configuration allows passing arbitrary core_id and affinity_mask values
+/// This struct allows passing arbitrary core_id and affinity_mask values
 /// directly to the underlying SVC without any validation. Use with caution
 /// as invalid values may cause kernel errors.
-///
-/// Only available when the `ffi` feature is enabled.
-#[cfg(feature = "ffi")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RawCoreAffinity {
     core_id: i32,
     affinity_mask: u32,
 }
 
-#[cfg(feature = "ffi")]
 impl RawCoreAffinity {
-    /// Creates a new [`RawCoreAffinity`] configuration with the specified raw values.
+    /// Creates a new [`RawCoreAffinity`] with the specified raw values without validation.
     ///
-    /// No validation is performed on the input values - they are passed directly
-    /// to the underlying SVC. Use with caution as invalid values may cause kernel errors.
-    pub const fn new(core_id: i32, affinity_mask: u32) -> Self {
+    /// # Safety
+    ///
+    /// This function does not validate the input values. Invalid values may cause
+    /// kernel errors when passed to the SVC. Use with caution.
+    pub const fn new_unchecked(core_id: i32, affinity_mask: u32) -> Self {
         Self {
             core_id,
             affinity_mask,
         }
     }
 }
+
+impl IntoCoreAffinity for RawCoreAffinity {
+    fn to_core_id_and_mask(self) -> (i32, u32) {
+        (self.core_id, self.affinity_mask)
+    }
+}
+
+impl _priv::Sealed for RawCoreAffinity {}
 
 /// Error type for invalid core numbers.
 #[derive(Debug, thiserror::Error)]
@@ -702,4 +696,9 @@ impl ToRawResultCode for SetCoreMaskError {
             Self::Unknown(err) => err.to_raw(),
         }
     }
+}
+
+mod _priv {
+    /// Sealed trait to prevent external implementations.
+    pub trait Sealed {}
 }
