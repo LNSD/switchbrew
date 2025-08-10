@@ -347,3 +347,359 @@ pub fn get_current_processor_number() -> u32 {
     // returns the current processor number without any side effects
     unsafe { raw::get_current_processor_number() }
 }
+
+/// Sets the CPU core affinity for a thread.
+///
+/// This function configures which CPU cores the specified thread is allowed
+/// to run on and optionally which core it prefers using the type-safe
+/// [`CoreAffinity`] enum.
+pub fn set_core_mask(handle: Handle, affinity: CoreAffinity) -> Result<(), SetCoreMaskError> {
+    let (core_id, affinity_mask) = affinity.to_raw();
+    let rc = unsafe { raw::set_thread_core_mask(handle.to_raw(), core_id, affinity_mask) };
+    RawResult::from_raw(rc).map((), |rc| match rc.description() {
+        desc if KError::InvalidHandle == desc => SetCoreMaskError::InvalidHandle,
+        desc if KError::InvalidCoreId == desc => SetCoreMaskError::InvalidCoreId,
+        desc if KError::InvalidCombination == desc => SetCoreMaskError::InvalidCombination,
+        desc if KError::TerminationRequested == desc => SetCoreMaskError::TerminationRequested,
+        _ => SetCoreMaskError::Unknown(rc.into()),
+    })
+}
+
+/// CPU core affinity configuration for threads.
+///
+/// This enum represents all the different ways to configure which CPU cores
+/// a thread can run on and which core it prefers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CoreAffinity {
+    /// Run on a specific preferred core with the given affinity mask.
+    Specific(SpecificCoreAffinity),
+
+    /// Use any core specified in the affinity mask with no preferred core.
+    Any(AnyCoreAffinity),
+
+    /// Use the process's default core, ignoring any provided affinity mask.
+    ///
+    /// This will set both the preferred core and the affinity mask to only
+    /// include the process's default core. The original affinity_mask is
+    /// completely ignored.
+    ProcessDefault(ProcessDefaultCoreAffinity),
+
+    /// Preserve the current preferred core and apply the new affinity mask.
+    NoUpdate(NoUpdateCoreAffinity),
+
+    /// Raw core affinity values without validation.
+    ///
+    /// This variant allows passing arbitrary core_id and affinity_mask values
+    /// directly to the underlying SVC without any validation. Use with caution
+    /// as invalid values may cause kernel errors.
+    ///
+    /// Only available when the `ffi` feature is enabled.
+    #[cfg(feature = "ffi")]
+    Raw(RawCoreAffinity),
+}
+
+impl CoreAffinity {
+    /// Creates a [`CoreAffinity`] for a specific preferred core, validating the core number and affinity mask.
+    ///
+    /// # Parameters
+    /// - `core`: Preferred CPU core number (valid range: 0-3 for Nintendo Switch)
+    /// - `affinity_mask`: Bitmask of allowed cores (valid range: 0x1-0xF where each bit represents a core)
+    ///   - 0x1 (0001) = Core 0 only
+    ///   - 0x2 (0010) = Core 1 only  
+    ///   - 0x4 (0100) = Core 2 only
+    ///   - 0x8 (1000) = Core 3 only
+    ///   - 0xF (1111) = All cores allowed
+    ///
+    /// The preferred core must be included in the affinity mask.
+    ///
+    /// Returns an error if the core number is invalid (>= 4), the affinity mask is invalid,
+    /// or the preferred core is not included in the affinity mask.
+    pub fn specific(
+        core: u8,
+        affinity_mask: u32,
+    ) -> Result<CoreAffinity, SpecificCoreAffinityError> {
+        SpecificCoreAffinity::try_new(core, affinity_mask).map(CoreAffinity::Specific)
+    }
+
+    /// Creates a [`CoreAffinity`] for any core in the affinity mask.
+    ///
+    /// # Parameters
+    /// - `affinity_mask`: Bitmask of allowed cores (valid range: 0x1-0xF where each bit represents a core)
+    ///   - 0x1 (0001) = Core 0 only
+    ///   - 0x2 (0010) = Core 1 only  
+    ///   - 0x4 (0100) = Core 2 only
+    ///   - 0x8 (1000) = Core 3 only
+    ///   - 0xF (1111) = All cores allowed
+    ///
+    /// The thread will have no preferred core and the scheduler will choose
+    /// from any core allowed by the affinity mask.
+    ///
+    /// Returns an error if the affinity mask is invalid (zero or uses bits beyond 0-3).
+    pub fn any(affinity_mask: u32) -> Result<CoreAffinity, InvalidAffinityMaskError> {
+        AnyCoreAffinity::try_new(affinity_mask).map(CoreAffinity::Any)
+    }
+
+    /// Creates a [`CoreAffinity`] that uses the process's default core.
+    pub fn process_default() -> CoreAffinity {
+        CoreAffinity::ProcessDefault(ProcessDefaultCoreAffinity::new())
+    }
+
+    /// Creates a [`CoreAffinity`] that preserves the current preferred core and updates the affinity mask.
+    ///
+    /// # Parameters  
+    /// - `affinity_mask`: Bitmask of allowed cores (valid range: 0x1-0xF where each bit represents a core)
+    ///   - 0x1 (0001) = Core 0 only
+    ///   - 0x2 (0010) = Core 1 only  
+    ///   - 0x4 (0100) = Core 2 only
+    ///   - 0x8 (1000) = Core 3 only
+    ///   - 0xF (1111) = All cores allowed
+    ///
+    /// The thread's current preferred core setting is preserved, and only the
+    /// affinity mask is updated with the new value.
+    ///
+    /// Returns an error if the affinity mask is invalid (zero or uses bits beyond 0-3).
+    pub fn no_update(affinity_mask: u32) -> Result<CoreAffinity, InvalidAffinityMaskError> {
+        NoUpdateCoreAffinity::try_new(affinity_mask).map(CoreAffinity::NoUpdate)
+    }
+
+    /// Creates a [`CoreAffinity`] with raw core_id and affinity_mask values without validation.
+    ///
+    /// This function allows passing arbitrary values directly to the underlying SVC
+    /// without any validation. Use with caution as invalid values may cause kernel errors.
+    ///
+    /// # Parameters
+    /// - `core_id`: Raw core ID value to pass to the SVC
+    /// - `affinity_mask`: Raw affinity mask value to pass to the SVC
+    ///
+    /// Only available when the `ffi` feature is enabled.
+    #[cfg(feature = "ffi")]
+    pub fn raw(core_id: i32, affinity_mask: u32) -> CoreAffinity {
+        CoreAffinity::Raw(RawCoreAffinity::new(core_id, affinity_mask))
+    }
+
+    /// Converts to the raw (core_id, affinity_mask) tuple expected by the SVC.
+    fn to_raw(self) -> (i32, u32) {
+        match self {
+            CoreAffinity::Specific(SpecificCoreAffinity {
+                core,
+                affinity_mask,
+            }) => (core as i32, affinity_mask),
+            CoreAffinity::Any(AnyCoreAffinity { affinity_mask }) => (-1, affinity_mask),
+            CoreAffinity::ProcessDefault(_) => (-2, 0),
+            CoreAffinity::NoUpdate(NoUpdateCoreAffinity { affinity_mask }) => (-3, affinity_mask),
+            #[cfg(feature = "ffi")]
+            CoreAffinity::Raw(RawCoreAffinity {
+                core_id,
+                affinity_mask,
+            }) => (core_id, affinity_mask),
+        }
+    }
+}
+
+/// Configuration for running a thread on a specific preferred core.
+///
+/// The preferred core (0-3) must be present in the affinity mask,
+/// or the operation will fail with `InvalidCombination`. The thread will
+/// prefer to run on the specified core but can migrate to other cores
+/// allowed by the mask.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SpecificCoreAffinity {
+    core: u8,
+    affinity_mask: u32,
+}
+
+impl SpecificCoreAffinity {
+    /// Creates a new [`SpecificCoreAffinity`] configuration, validating both core number and affinity mask.
+    ///
+    /// Returns an error if the core number is invalid (>= 4) or the affinity mask is invalid.
+    const fn try_new(core: u8, affinity_mask: u32) -> Result<Self, SpecificCoreAffinityError> {
+        // Validate core number
+        if core >= 4 {
+            return Err(SpecificCoreAffinityError::InvalidCore(InvalidCoreError {
+                core,
+            }));
+        }
+
+        // Validate affinity mask: must be non-zero and only use bits 0-3
+        if affinity_mask == 0 || (affinity_mask & !0xF) != 0 {
+            return Err(SpecificCoreAffinityError::InvalidAffinityMask(
+                InvalidAffinityMaskError {
+                    mask: affinity_mask,
+                },
+            ));
+        }
+
+        // Check that the specific core is included in the affinity mask
+        if (affinity_mask & (1 << core)) == 0 {
+            return Err(SpecificCoreAffinityError::InvalidAffinityMask(
+                InvalidAffinityMaskError {
+                    mask: affinity_mask,
+                },
+            ));
+        }
+
+        Ok(Self {
+            core,
+            affinity_mask,
+        })
+    }
+}
+
+/// Error type for core affinity validation failures.
+#[derive(Debug, thiserror::Error)]
+pub enum SpecificCoreAffinityError {
+    /// Invalid core number.
+    #[error(transparent)]
+    InvalidCore(#[from] InvalidCoreError),
+    /// Invalid affinity mask.
+    #[error(transparent)]
+    InvalidAffinityMask(#[from] InvalidAffinityMaskError),
+}
+
+/// Configuration for running a thread on any core in the affinity mask.
+///
+/// The thread has no preferred core and the scheduler will choose
+/// from any core allowed by the affinity mask.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AnyCoreAffinity {
+    affinity_mask: u32,
+}
+
+impl AnyCoreAffinity {
+    /// Creates a new [`AnyCoreAffinity`] configuration with the specified affinity mask.
+    const fn try_new(affinity_mask: u32) -> Result<Self, InvalidAffinityMaskError> {
+        // Validate affinity mask: must be non-zero and only use bits 0-3
+        if affinity_mask == 0 || (affinity_mask & !0xF) != 0 {
+            Err(InvalidAffinityMaskError {
+                mask: affinity_mask,
+            })
+        } else {
+            Ok(Self { affinity_mask })
+        }
+    }
+}
+
+/// Configuration for using the process's default core.
+///
+/// This configuration ignores any provided affinity mask and uses the process's
+/// default core setting for both the preferred core and the affinity mask.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ProcessDefaultCoreAffinity {
+    _priv: (),
+}
+
+impl ProcessDefaultCoreAffinity {
+    /// Creates a new [`ProcessDefaultCoreAffinity`] configuration.
+    const fn new() -> Self {
+        Self { _priv: () }
+    }
+}
+
+/// Configuration for updating only the affinity mask while preserving the current preferred core.
+///
+/// The thread's current preferred core setting is kept unchanged,
+/// and only the affinity mask is updated with the new value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NoUpdateCoreAffinity {
+    affinity_mask: u32,
+}
+
+impl NoUpdateCoreAffinity {
+    /// Creates a new [`NoUpdateCoreAffinity`] configuration with the specified affinity mask.
+    const fn try_new(affinity_mask: u32) -> Result<Self, InvalidAffinityMaskError> {
+        // Validate affinity mask: must be non-zero and only use bits 0-3
+        if affinity_mask == 0 || (affinity_mask & !0xF) != 0 {
+            Err(InvalidAffinityMaskError {
+                mask: affinity_mask,
+            })
+        } else {
+            Ok(Self { affinity_mask })
+        }
+    }
+}
+
+/// Configuration for raw core affinity values without validation.
+///
+/// This configuration allows passing arbitrary core_id and affinity_mask values
+/// directly to the underlying SVC without any validation. Use with caution
+/// as invalid values may cause kernel errors.
+///
+/// Only available when the `ffi` feature is enabled.
+#[cfg(feature = "ffi")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RawCoreAffinity {
+    core_id: i32,
+    affinity_mask: u32,
+}
+
+#[cfg(feature = "ffi")]
+impl RawCoreAffinity {
+    /// Creates a new [`RawCoreAffinity`] configuration with the specified raw values.
+    ///
+    /// No validation is performed on the input values - they are passed directly
+    /// to the underlying SVC. Use with caution as invalid values may cause kernel errors.
+    pub const fn new(core_id: i32, affinity_mask: u32) -> Self {
+        Self {
+            core_id,
+            affinity_mask,
+        }
+    }
+}
+
+/// Error type for invalid core numbers.
+#[derive(Debug, thiserror::Error)]
+#[error("Invalid core number {core}: must be in range 0..4")]
+pub struct InvalidCoreError {
+    /// The invalid core number that was provided.
+    pub core: u8,
+}
+
+/// Error type for invalid affinity masks.
+#[derive(Debug, thiserror::Error)]
+#[error(
+    "Invalid affinity mask 0x{mask:X}: must be non-zero and only use bits 0-3 (valid range: 0x1..=0xF)"
+)]
+pub struct InvalidAffinityMaskError {
+    /// The invalid affinity mask that was provided.
+    pub mask: u32,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SetCoreMaskError {
+    /// The supplied handle is not a valid thread handle —
+    /// `KernelError::InvalidHandle` (raw code `0xE401`).
+    #[error("Invalid handle")]
+    InvalidHandle,
+
+    /// The specified core ID is invalid or affinity mask contains disallowed cores —
+    /// `KernelError::InvalidCoreId` (raw code `0x271`).
+    #[error("Invalid core id")]
+    InvalidCoreId,
+
+    /// Zero affinity mask or core ID not in affinity mask —
+    /// `KernelError::InvalidCombination` (raw code `0x274`).
+    #[error("Invalid combination")]
+    InvalidCombination,
+
+    /// Thread termination was requested during the operation —
+    /// `KernelError::TerminationRequested` (raw code `0x23B`).
+    #[error("Termination requested")]
+    TerminationRequested,
+
+    /// Any unforeseen kernel error. Contains the original [`Error`] so callers
+    /// can inspect the raw result (`Error::to_raw`).
+    #[error("Unknown error: {0}")]
+    Unknown(Error),
+}
+
+impl ToRawResultCode for SetCoreMaskError {
+    fn to_rc(self) -> ResultCode {
+        match self {
+            Self::InvalidHandle => KError::InvalidHandle.to_rc(),
+            Self::InvalidCoreId => KError::InvalidCoreId.to_rc(),
+            Self::InvalidCombination => KError::InvalidCombination.to_rc(),
+            Self::TerminationRequested => KError::TerminationRequested.to_rc(),
+            Self::Unknown(err) => err.to_raw(),
+        }
+    }
+}
