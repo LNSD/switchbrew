@@ -14,7 +14,7 @@ use nx_svc::{
     raw::{Handle as RawHandle, INVALID_HANDLE},
 };
 
-use super::sys::{self, Mapped, Permission, Unmapped};
+use super::sys::{self, Mapped, Unmapped};
 
 /// Shared memory object (C-compatible wrapper)
 #[repr(C)]
@@ -39,12 +39,18 @@ unsafe extern "C" fn __nx_shmem_create(
         return KernelError::InvalidPointer.to_rc();
     }
 
-    match unsafe { sys::create(size, local_perm, remote_perm) } {
+    match unsafe {
+        sys::create(
+            size,
+            sys::LocalPermissions::from_bits_retain(local_perm),
+            sys::RemotePermissions::from_bits_retain(remote_perm),
+        )
+    } {
         Ok(shm) => {
             let sm = unsafe { &mut *s };
             sm.handle = shm.handle().to_raw();
             sm.size = shm.size();
-            sm.perm = shm.perm() as u32;
+            sm.perm = shm.perm().bits();
             sm.map_addr = ptr::null_mut();
             0
         }
@@ -93,7 +99,7 @@ unsafe extern "C" fn __nx_shmem_map(s: *mut SharedMemory) -> u32 {
             sys::SharedMemory::<Unmapped>::from_parts(
                 Handle::from_raw(sm.handle),
                 sm.size,
-                sm.perm as Permission,
+                sys::Permissions::from_bits_retain(sm.perm),
             )
         }
     };
@@ -128,7 +134,7 @@ unsafe extern "C" fn __nx_shmem_unmap(s: *mut SharedMemory) -> u32 {
         sys::SharedMemory::<Mapped>::from_parts(
             Handle::from_raw(sm.handle),
             sm.size,
-            sm.perm as Permission,
+            sys::Permissions::from_bits_retain(sm.perm),
             map_addr,
         )
     };
@@ -179,7 +185,7 @@ unsafe extern "C" fn __nx_shmem_close(s: *mut SharedMemory) -> u32 {
             sys::SharedMemory::<Unmapped>::from_parts(
                 Handle::from_raw(sm.handle),
                 sm.size,
-                sm.perm as Permission,
+                sys::Permissions::from_bits_retain(sm.perm),
             )
         }
     };

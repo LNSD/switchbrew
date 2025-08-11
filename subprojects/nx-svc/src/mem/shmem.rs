@@ -5,6 +5,8 @@
 
 use core::ffi::c_void;
 
+use bitflags::bitflags;
+
 use crate::{
     error::{KernelError as KError, ToRawResultCode},
     raw,
@@ -21,11 +23,13 @@ define_handle_type! {
 /// On success returns the newly created shared memory kernel [`Handle`].
 pub fn create_shared_memory(
     size: usize,
-    local_perm: u32,
-    remote_perm: u32,
+    local_perm: LocalShmemPermission,
+    remote_perm: RemoteShmemPermission,
 ) -> Result<Handle, CreateSharedMemoryError> {
     let mut handle = raw::INVALID_HANDLE;
-    let rc = unsafe { raw::create_shared_memory(&mut handle, size, local_perm, remote_perm) };
+    let rc = unsafe {
+        raw::create_shared_memory(&mut handle, size, local_perm.bits(), remote_perm.bits())
+    };
 
     RawResult::from_raw(rc).map(Handle(handle), |rc| match rc.description() {
         desc if KError::OutOfMemory == desc => CreateSharedMemoryError::OutOfMemory,
@@ -59,9 +63,9 @@ pub fn map_shared_memory(
     handle: Handle,
     addr: *mut c_void,
     size: usize,
-    perm: u32,
+    perm: MemoryPermission,
 ) -> Result<(), MapSharedMemoryError> {
-    let rc = unsafe { raw::map_shared_memory(handle.0, addr, size, perm) };
+    let rc = unsafe { raw::map_shared_memory(handle.0, addr, size, perm.bits()) };
     RawResult::from_raw(rc).map((), |rc| match rc.description() {
         desc if KError::InvalidHandle == desc => MapSharedMemoryError::InvalidHandle,
         desc if KError::InvalidAddress == desc => MapSharedMemoryError::InvalidAddress,
@@ -182,5 +186,52 @@ impl ToRawResultCode for CloseHandleError {
             Self::InvalidHandle => KError::InvalidHandle.to_rc(),
             Self::Unknown(err) => err.to_raw(),
         }
+    }
+}
+
+bitflags! {
+    /// Local shared memory permissions
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(transparent)]
+    pub struct LocalShmemPermission: u32 {
+        /// Read permission
+        const R = 1 << 0;
+        /// Write permission (used only for RW combination)
+        #[doc(hidden)]
+        const _W = 1 << 1;
+        /// Read/write permissions
+        const RW = Self::R.bits() | Self::_W.bits();
+    }
+}
+
+bitflags! {
+    /// Remote shared memory permissions
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(transparent)]
+    pub struct RemoteShmemPermission: u32 {
+        /// Read permission
+        const R = 1 << 0;
+        /// Write permission (used only for RW combination)
+        #[doc(hidden)]
+        const _W = 1 << 1;
+        /// Read/write permissions
+        const RW = Self::R.bits() | Self::_W.bits();
+        /// Don't care permission
+        const DONT_CARE = 1 << 28;
+    }
+}
+
+bitflags! {
+    /// Memory permissions for shared memory objects
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(transparent)]
+    pub struct MemoryPermission: u32 {
+        /// Read permission
+        const R = 1 << 0;
+        /// Write permission (used only for RW combination)
+        #[doc(hidden)]
+        const _W = 1 << 1;
+        /// Read/write permissions
+        const RW = Self::R.bits() | Self::_W.bits();
     }
 }

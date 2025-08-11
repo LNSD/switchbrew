@@ -32,7 +32,9 @@ use core::{ffi::c_void, ptr::NonNull};
 
 use nx_svc::{
     error::ToRawResultCode,
-    mem::shmem::{self as svc, Handle},
+    mem::shmem::{
+        self as svc, Handle, LocalShmemPermission, MemoryPermission, RemoteShmemPermission,
+    },
 };
 
 use crate::vmm::sys as vmm;
@@ -40,12 +42,10 @@ use crate::vmm::sys as vmm;
 /// Guard size 0x1000, per libnx
 const GUARD_SIZE: usize = 0x1000;
 
-/// Memory-permission bitmask (see [`Perm_*`] constants in `nx_shmem.h`).
-///
-/// In libnx this is an `enum Permission`.  We just use `u32` and forward the
-/// value directly to the kernel.
-// TODO: Add PermissionBuilder and Permission object
-pub type Permission = u32;
+/// Memory-permission bitmask for shared memory operations.
+pub type Permissions = MemoryPermission;
+pub type LocalPermissions = LocalShmemPermission;
+pub type RemotePermissions = RemoteShmemPermission;
 
 /// Shared memory kernel object
 ///
@@ -65,14 +65,14 @@ pub struct SharedMemory<S: ShmState + core::fmt::Debug>(S);
 /// which is inherently unsafe.
 pub unsafe fn create(
     size: usize,
-    local_perm: Permission,
-    remote_perm: Permission,
+    local_perm: LocalPermissions,
+    remote_perm: RemotePermissions,
 ) -> Result<SharedMemory<Unmapped>, CreateError> {
     match svc::create_shared_memory(size, local_perm, remote_perm) {
         Ok(handle) => Ok(SharedMemory(Unmapped {
             handle,
             size,
-            perm: local_perm,
+            perm: Permissions::from_bits_truncate(local_perm.bits()),
         })),
         Err(err) => Err(CreateError(err)),
     }
@@ -84,7 +84,7 @@ pub fn load_remote(
     shm: &mut SharedMemory<Unmapped>,
     handle: Handle,
     size: usize,
-    perm: Permission,
+    perm: Permissions,
 ) {
     shm.0 = Unmapped { handle, size, perm };
 }
@@ -194,7 +194,7 @@ pub struct CloseError {
 pub trait ShmState: _priv::Sealed {
     fn handle(&self) -> Handle;
     fn size(&self) -> usize;
-    fn perm(&self) -> Permission;
+    fn perm(&self) -> Permissions;
     fn is_mapped(&self) -> bool;
     fn get_addr(&self) -> Option<*mut c_void>;
 }
@@ -203,7 +203,7 @@ pub trait ShmState: _priv::Sealed {
 pub struct Unmapped {
     handle: Handle,
     size: usize,
-    perm: Permission,
+    perm: Permissions,
 }
 
 impl ShmState for Unmapped {
@@ -215,7 +215,7 @@ impl ShmState for Unmapped {
         self.size
     }
 
-    fn perm(&self) -> Permission {
+    fn perm(&self) -> Permissions {
         self.perm
     }
 
@@ -234,7 +234,7 @@ impl _priv::Sealed for Unmapped {}
 pub struct Mapped {
     handle: Handle,
     size: usize,
-    perm: Permission,
+    perm: Permissions,
     addr: NonNull<c_void>,
 }
 
@@ -247,7 +247,7 @@ impl ShmState for Mapped {
         self.size
     }
 
-    fn perm(&self) -> Permission {
+    fn perm(&self) -> Permissions {
         self.perm
     }
 
@@ -275,7 +275,7 @@ impl SharedMemory<Mapped> {
     pub(super) unsafe fn from_parts(
         handle: Handle,
         size: usize,
-        perm: Permission,
+        perm: Permissions,
         addr: NonNull<c_void>,
     ) -> Self {
         Self(Mapped {
@@ -292,7 +292,7 @@ impl SharedMemory<Unmapped> {
     /// Construct a `Unmapped` shared-memory object from its constituent parts.
     ///
     /// Internal constructor used by the FFI layer.
-    pub(super) unsafe fn from_parts(handle: Handle, size: usize, perm: Permission) -> Self {
+    pub(super) unsafe fn from_parts(handle: Handle, size: usize, perm: Permissions) -> Self {
         Self(Unmapped { handle, size, perm })
     }
 }
@@ -313,7 +313,7 @@ where
     }
 
     /// Memory permissions requested when mapping locally.
-    pub fn perm(&self) -> Permission {
+    pub fn perm(&self) -> Permissions {
         self.0.perm()
     }
 
