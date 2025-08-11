@@ -32,18 +32,34 @@ threadTlsGet       = __nx_sys_thread_tls_get;
 threadTlsSet       = __nx_sys_thread_tls_set;
 
 /* libc (newlib - libsysbase) */
+EXTERN(__nx_sys_thread__libsysbase_syscall_thread_create)
+EXTERN(__nx_sys_thread__libsysbase_syscall_thread_join)
+EXTERN(__nx_sys_thread__libsysbase_syscall_thread_exit)
+EXTERN(__nx_sys_thread__libsysbase_syscall_thread_self)
+EXTERN(__nx_sys_thread__libsysbase_syscall_thread_detach)
+EXTERN(__nx_sys_thread__libsysbase_syscall_tls_create)
+EXTERN(__nx_sys_thread__libsysbase_syscall_tls_set)
+EXTERN(__nx_sys_thread__libsysbase_syscall_tls_get)
+EXTERN(__nx_sys_thread__libsysbase_syscall_tls_delete)
+
+__syscall_thread_create = __nx_sys_thread__libsysbase_syscall_thread_create;
+__syscall_thread_join   = __nx_sys_thread__libsysbase_syscall_thread_join;
+__syscall_thread_exit   = __nx_sys_thread__libsysbase_syscall_thread_exit;
+__syscall_thread_self   = __nx_sys_thread__libsysbase_syscall_thread_self;
+__syscall_thread_detach = __nx_sys_thread__libsysbase_syscall_thread_detach;
+__syscall_tls_create    = __nx_sys_thread__libsysbase_syscall_tls_create;
+__syscall_tls_set       = __nx_sys_thread__libsysbase_syscall_tls_set;
+__syscall_tls_get       = __nx_sys_thread__libsysbase_syscall_tls_get;
+__syscall_tls_delete    = __nx_sys_thread__libsysbase_syscall_tls_delete;
+
 EXTERN(__nx_sys_thread__libsysbase_sleep)
 EXTERN(__nx_sys_thread__libsysbase_usleep)
 EXTERN(__nx_sys_thread__libsysbase_nanosleep)
-EXTERN(__nx_sys_thread__libsysbase_pthread_setspecific)
-EXTERN(__nx_sys_thread__libsysbase_pthread_getspecific)
 EXTERN(__nx_sys_thread__libsysbase_sched_yield)
 EXTERN(__nx_sys_thread__libsysbase_sched_getcpu)
 
-sleep               = __nx_sys_thread__libsysbase_sleep;
-usleep              = __nx_sys_thread__libsysbase_usleep;
-nanosleep           = __nx_sys_thread__libsysbase_nanosleep;
-pthread_setspecific = __nx_sys_thread__libsysbase_pthread_setspecific;
-pthread_getspecific = __nx_sys_thread__libsysbase_pthread_getspecific;
-sched_yield         = __nx_sys_thread__libsysbase_sched_yield;
-sched_getcpu        = __nx_sys_thread__libsysbase_sched_getcpu;
+sleep        = __nx_sys_thread__libsysbase_sleep;
+usleep       = __nx_sys_thread__libsysbase_usleep;
+nanosleep    = __nx_sys_thread__libsysbase_nanosleep;
+sched_yield  = __nx_sys_thread__libsysbase_sched_yield;
+sched_getcpu = __nx_sys_thread__libsysbase_sched_getcpu;
