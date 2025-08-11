@@ -24,7 +24,7 @@ pub fn create_shared_memory(
     local_perm: u32,
     remote_perm: u32,
 ) -> Result<Handle, CreateSharedMemoryError> {
-    let mut handle: raw::Handle = raw::INVALID_HANDLE;
+    let mut handle = raw::INVALID_HANDLE;
     let rc = unsafe { raw::create_shared_memory(&mut handle, size, local_perm, remote_perm) };
 
     RawResult::from_raw(rc).map(Handle(handle), |rc| match rc.description() {

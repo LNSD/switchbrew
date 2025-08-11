@@ -1,6 +1,7 @@
 use core::{ffi::c_void, ptr};
 
-pub use crate::raw::{Handle, INVALID_HANDLE};
+use bitflags::bitflags;
+
 use crate::{
     error::{KernelError as KError, ResultCode, ToRawResultCode},
     raw,
@@ -381,7 +382,7 @@ impl From<raw::MemoryInfo> for MemoryInfo {
             typ: mem_type,
             state: mem_state,
             attr: MemoryAttribute(raw::MemoryAttribute::from_bits_truncate(value.attr)),
-            perm: MemoryPermission(raw::MemoryPermission::from_bits_truncate(value.perm)),
+            perm: MemoryPermission::from_bits_truncate(value.perm),
             ipc_refcount: value.ipc_refcount,
             device_refcount: value.device_refcount,
         }
@@ -646,50 +647,49 @@ impl MemoryAttribute {
         self.0.contains(raw::MemoryAttribute::IS_PERMISSION_LOCKED)
     }
 }
-/// Memory permissions for a memory region
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(transparent)]
-pub struct MemoryPermission(raw::MemoryPermission);
+
+bitflags! {
+    /// Memory permissions for a memory region
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+    #[repr(transparent)]
+    pub struct MemoryPermission: u32 {
+        /// Read permission
+        const R = 1 << 0;
+        /// Write permission
+        const W = 1 << 1;
+        /// Execute permission
+        const X = 1 << 2;
+    }
+}
 
 impl MemoryPermission {
     /// Returns whether this permission includes read access
     pub fn is_readable(&self) -> bool {
-        self.0.contains(raw::MemoryPermission::R)
+        self.contains(MemoryPermission::R)
     }
 
     /// Returns whether this permission includes write access
     pub fn is_writable(&self) -> bool {
-        self.0.contains(raw::MemoryPermission::W)
+        self.contains(MemoryPermission::W)
     }
 
     /// Returns whether this permission includes execute access
     pub fn is_executable(&self) -> bool {
-        self.0.contains(raw::MemoryPermission::X)
+        self.contains(MemoryPermission::X)
     }
 
     /// Returns whether this permission has no access rights
     pub fn is_none(&self) -> bool {
-        self.0.is_empty()
+        self.is_empty()
     }
 
     /// Returns whether this permission has read/write access
     pub fn is_read_write(&self) -> bool {
-        self.0.contains(raw::MemoryPermission::RW)
+        self.contains(MemoryPermission::R | MemoryPermission::W)
     }
 
     /// Returns whether this permission has read/execute access
     pub fn is_read_execute(&self) -> bool {
-        self.0.contains(raw::MemoryPermission::RX)
-    }
-
-    /// Returns whether this permission is set to don't care
-    pub fn is_dont_care(&self) -> bool {
-        self.0.contains(raw::MemoryPermission::DONT_CARE)
-    }
-}
-
-impl From<MemoryPermission> for raw::MemoryPermission {
-    fn from(perm: MemoryPermission) -> Self {
-        perm.0
+        self.contains(MemoryPermission::R | MemoryPermission::X)
     }
 }

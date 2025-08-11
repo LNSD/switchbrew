@@ -305,8 +305,7 @@ pub unsafe fn wait_for_permission(
     loop {
         match memcore::query_memory(src_addr as usize) {
             Ok((mem_info, _page)) => {
-                let raw_perm: nx_svc::raw::MemoryPermission = mem_info.perm.into();
-                if (raw_perm.bits() & perm) == perm {
+                if (mem_info.perm.bits() & perm) == perm {
                     break;
                 }
             }

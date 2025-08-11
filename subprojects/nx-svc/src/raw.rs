@@ -184,7 +184,7 @@ pub struct MemoryInfo {
     pub typ: u32,
     /// Memory attributes (see [`MemoryAttribute`])
     pub attr: u32,
-    /// Memory permissions (see [`MemoryPermission`])
+    /// Memory permissions
     pub perm: u32,
     /// IPC reference count
     pub ipc_refcount: u32,
@@ -309,28 +309,6 @@ bitflags! {
         const IS_UNCACHED = 1 << 3;
         /// Is permission locked
         const IS_PERMISSION_LOCKED = 1 << 4;
-    }
-}
-
-bitflags! {
-    /// Memory permissions
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-    #[repr(transparent)]
-    pub struct MemoryPermission: u32 {
-        /// No permissions
-        const NONE = 0;
-        /// Read permission
-        const R = 1 << 0;
-        /// Write permission
-        const W = 1 << 1;
-        /// Execute permission
-        const X = 1 << 2;
-        /// Read/write permissions
-        const RW = Self::R.bits() | Self::W.bits();
-        /// Read/execute permissions
-        const RX = Self::R.bits() | Self::X.bits();
-        /// Don't care
-        const DONT_CARE = 1 << 28;
     }
 }
 
@@ -465,14 +443,14 @@ pub unsafe extern "C" fn set_heap_size(out_addr: *mut *mut c_void, size: usize) 
 /// | --- | --- | --- |
 /// | IN | _addr_ | Start address of the range. |
 /// | IN | _size_ | Size of the range, in bytes. |
-/// | IN | _perm_ | Permissions (see [MemoryPermission]). |
+/// | IN | _perm_ | Memory permissions (as u32 bitflags: R=1, W=2, X=4, DONT_CARE=1<<28). |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#SetMemoryPermission>
 #[unsafe(naked)]
 pub unsafe extern "C" fn set_memory_permission(
     addr: *mut c_void,
     size: usize,
-    perm: u32, // TODO: MemoryPermission bitfield
+    perm: u32,
 ) -> ResultCode {
     core::arch::naked_asm!(
         "svc {code}",          // Issue the SVC call with immediate value 0x2
@@ -892,7 +870,7 @@ pub unsafe extern "C" fn clear_event(handle: Handle) -> ResultCode {
 /// | IN | _handle_ | Handle of the shared memory block. |
 /// | IN | _addr_ | Address to map the block to. |
 /// | IN | _size_ | Size of the block. |
-/// | IN | _perm_ | Permissions (see [MemoryPermission]). |
+/// | IN | _perm_ | Memory permissions (as u32 bitflags: R=1, W=2, X=4, DONT_CARE=1<<28). |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#MapSharedMemory>
 #[unsafe(naked)]
@@ -900,7 +878,7 @@ pub unsafe extern "C" fn map_shared_memory(
     handle: Handle,
     addr: *mut c_void,
     size: usize,
-    perm: u32, // TODO: MemoryPermission bitfield
+    perm: u32,
 ) -> ResultCode {
     core::arch::naked_asm!(
         "svc {code}", // Issue the SVC call with immediate value 0x13
@@ -946,7 +924,7 @@ pub unsafe extern "C" fn unmap_shared_memory(
 /// | OUT | _handle_ | Output handle for the created transfer memory block. |
 /// | IN | _addr_ | Address of the block. |
 /// | IN | _size_ | Size of the block. |
-/// | IN | _perm_ | Permissions (see [MemoryPermission]). |
+/// | IN | _perm_ | Memory permissions (as u32 bitflags: R=1, W=2, X=4, DONT_CARE=1<<28). |
 ///
 /// Ref: <https://switchbrew.org/wiki/SVC#CreateTransferMemory>
 #[unsafe(naked)]
@@ -954,7 +932,7 @@ pub unsafe extern "C" fn create_transfer_memory(
     handle: *mut Handle,
     addr: *mut c_void,
     size: usize,
-    perm: u32, // TODO: MemoryPermission bitfield
+    perm: u32,
 ) -> ResultCode {
     core::arch::naked_asm!(
         "str x0, [sp, #-16]!", // Store x0 (handle pointer) on stack with pre-decrement
@@ -1944,7 +1922,7 @@ pub unsafe extern "C" fn create_io_region(
     physical_address: u64,
     size: u64,
     mapping: MemoryMapping,
-    perm: u32, // TODO: MemoryPermission bitfield
+    perm: u32,
 ) -> ResultCode {
     core::arch::naked_asm!(
         "str x0, [sp, #-16]!", // Store x0 (handle pointer) on stack

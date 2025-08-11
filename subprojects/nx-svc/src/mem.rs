@@ -7,4 +7,4 @@ pub mod core;
 pub mod shmem;
 pub mod tmem;
 
-pub use self::core::*;
+pub use core::*;
