@@ -6,12 +6,14 @@ mod activity;
 mod context;
 mod info;
 mod sleep;
+mod stackmem;
 mod wait;
 
 pub use activity::*;
 pub use context::*;
 pub use info::*;
 pub use sleep::*;
+pub use stackmem::*;
 pub use wait::*;
 
 /// Gets the current processor/CPU core number.
