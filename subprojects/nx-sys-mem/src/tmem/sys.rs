@@ -26,7 +26,10 @@ use alloc::alloc::{Layout, alloc_zeroed, dealloc};
 use core::{ffi::c_void, ptr, ptr::NonNull};
 
 use nx_svc::{
-    mem::{core as memcore, tmem as svc, tmem::Handle},
+    mem::{
+        core as memcore, tmem as svc,
+        tmem::{Handle, MemoryPermission},
+    },
     thread,
 };
 
@@ -37,7 +40,7 @@ const GUARD_SIZE: usize = 0x1000;
 
 /// Memory-permission bitmask (see `Perm_*` constants in `nx_tmem.h`).
 /// In libnx this is an `enum Permission`; we simply forward the raw `u32`.
-pub type Permission = u32;
+pub type Permissions = MemoryPermission;
 
 /// State-dependent wrapper around a transfer-memory kernel object.
 #[derive(Debug)]
@@ -57,7 +60,7 @@ pub struct TransferMemory<S: TmemState + core::fmt::Debug>(S);
 /// Horizon OS manual.
 pub unsafe fn create(
     size: usize,
-    perm: Permission,
+    perm: Permissions,
 ) -> Result<TransferMemory<Unmapped>, CreateError> {
     // Allocate page-aligned, zero-filled backing memory.
     let layout = Layout::from_size_align(size, 0x1000).map_err(|_| CreateError::OutOfMemory)?;
@@ -96,7 +99,7 @@ pub unsafe fn create(
 pub unsafe fn create_from_memory(
     buf: *mut c_void,
     size: usize,
-    perm: Permission,
+    perm: Permissions,
 ) -> Result<TransferMemory<Unmapped>, CreateError> {
     // Check that the buffer is page-aligned and has sufficient size.
     if buf.is_null() || (buf as usize & 0xFFF) != 0 {
@@ -130,7 +133,7 @@ pub fn load_remote(
     tm: &mut TransferMemory<Unmapped>,
     handle: Handle,
     size: usize,
-    perm: Permission,
+    perm: Permissions,
 ) {
     tm.0 = Unmapped {
         handle,
@@ -289,7 +292,7 @@ pub struct CloseError {
 /// Unsafe for the same reasons as other kernel-interacting functions.
 pub unsafe fn wait_for_permission(
     tm: TransferMemory<Unmapped>,
-    perm: Permission,
+    perm: Permissions,
 ) -> Result<TransferMemory<Unmapped>, WaitForPermissionError> {
     // Quick-path: permissions already satisfy the requirement stored in the struct.
     if (tm.0.perm & perm) == perm {
@@ -305,7 +308,10 @@ pub unsafe fn wait_for_permission(
     loop {
         match memcore::query_memory(src_addr as usize) {
             Ok((mem_info, _page)) => {
-                if (mem_info.perm.bits() & perm) == perm {
+                if mem_info
+                    .perm
+                    .contains(memcore::MemoryPermission::from_bits_truncate(perm.bits()))
+                {
                     break;
                 }
             }
@@ -332,7 +338,7 @@ pub struct WaitForPermissionError {
 pub trait TmemState: _priv::Sealed {
     fn handle(&self) -> Handle;
     fn size(&self) -> usize;
-    fn perm(&self) -> Permission;
+    fn perm(&self) -> Permissions;
     fn src(&self) -> Option<NonNull<c_void>>;
     fn map_addr(&self) -> Option<NonNull<c_void>>;
 }
@@ -341,7 +347,7 @@ pub trait TmemState: _priv::Sealed {
 pub struct Unmapped {
     handle: Handle,
     size: usize,
-    perm: Permission,
+    perm: Permissions,
     src: Option<NonNull<c_void>>, // None if owned by another process
 }
 
@@ -354,7 +360,7 @@ impl TmemState for Unmapped {
         self.size
     }
 
-    fn perm(&self) -> Permission {
+    fn perm(&self) -> Permissions {
         self.perm
     }
 
@@ -372,7 +378,7 @@ impl _priv::Sealed for Unmapped {}
 pub struct Mapped {
     handle: Handle,
     size: usize,
-    perm: Permission,
+    perm: Permissions,
     src: Option<NonNull<c_void>>,
     addr: NonNull<c_void>,
 }
@@ -386,7 +392,7 @@ impl TmemState for Mapped {
         self.size
     }
 
-    fn perm(&self) -> Permission {
+    fn perm(&self) -> Permissions {
         self.perm
     }
 
@@ -410,7 +416,7 @@ impl TransferMemory<Mapped> {
     pub(super) unsafe fn from_parts(
         handle: Handle,
         size: usize,
-        perm: Permission,
+        perm: Permissions,
         src: Option<NonNull<c_void>>,
         addr: NonNull<c_void>,
     ) -> Self {
@@ -430,7 +436,7 @@ impl TransferMemory<Unmapped> {
     pub(super) unsafe fn from_parts(
         handle: Handle,
         size: usize,
-        perm: Permission,
+        perm: Permissions,
         src: Option<NonNull<c_void>>,
     ) -> Self {
         Self(Unmapped {
@@ -455,7 +461,7 @@ where
         self.0.size()
     }
 
-    pub fn perm(&self) -> Permission {
+    pub fn perm(&self) -> Permissions {
         self.0.perm()
     }
 

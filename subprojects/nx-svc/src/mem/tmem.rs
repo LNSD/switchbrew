@@ -5,6 +5,8 @@
 
 use core::ffi::c_void;
 
+use bitflags::bitflags;
+
 use crate::{
     error::{KernelError as KError, ToRawResultCode},
     raw,
@@ -19,15 +21,15 @@ define_handle_type! {
 /// Creates a transfer memory kernel object from an existing memory region.
 ///
 /// `addr` **must** be page-aligned (4 KiB) and have at least `size` bytes
-/// allocated. On success this function returns the newly created transfer
+/// allocated. On success this function returns the newly created transferWha
 /// memory [`Handle`].
 pub fn create_transfer_memory(
     addr: *mut c_void,
     size: usize,
-    perm: u32,
+    perm: MemoryPermission,
 ) -> Result<Handle, CreateTransferMemoryError> {
-    let mut handle: raw::Handle = raw::INVALID_HANDLE;
-    let rc = unsafe { raw::create_transfer_memory(&mut handle, addr, size, perm) };
+    let mut handle = raw::INVALID_HANDLE;
+    let rc = unsafe { raw::create_transfer_memory(&mut handle, addr, size, perm.bits()) };
 
     RawResult::from_raw(rc).map(Handle(handle), |rc| match rc.description() {
         desc if KError::InvalidSize == desc => CreateTransferMemoryError::InvalidSize,
@@ -46,9 +48,9 @@ pub fn map_transfer_memory(
     handle: Handle,
     addr: *mut c_void,
     size: usize,
-    perm: u32,
+    perm: MemoryPermission,
 ) -> Result<(), MapTransferMemoryError> {
-    let rc = unsafe { raw::map_transfer_memory(handle.0, addr, size, perm) };
+    let rc = unsafe { raw::map_transfer_memory(handle.to_raw(), addr, size, perm.bits()) };
     RawResult::from_raw(rc).map((), |rc| match rc.description() {
         desc if KError::InvalidHandle == desc => MapTransferMemoryError::InvalidHandle,
         desc if KError::InvalidAddress == desc => MapTransferMemoryError::InvalidAddress,
@@ -70,7 +72,7 @@ pub fn unmap_transfer_memory(
     addr: *mut c_void,
     size: usize,
 ) -> Result<(), UnmapTransferMemoryError> {
-    let rc = unsafe { raw::unmap_transfer_memory(handle.0, addr, size) };
+    let rc = unsafe { raw::unmap_transfer_memory(handle.to_raw(), addr, size) };
     RawResult::from_raw(rc).map((), |rc| match rc.description() {
         desc if KError::InvalidHandle == desc => UnmapTransferMemoryError::InvalidHandle,
         desc if KError::InvalidAddress == desc => UnmapTransferMemoryError::InvalidAddress,
@@ -87,11 +89,36 @@ pub fn unmap_transfer_memory(
 
 /// Closes a transfer memory handle.
 pub fn close_handle(handle: Handle) -> Result<(), CloseHandleError> {
-    let rc = unsafe { raw::close_handle(handle.0) };
+    let rc = unsafe { raw::close_handle(handle.to_raw()) };
     RawResult::from_raw(rc).map((), |rc| match rc.description() {
         desc if KError::InvalidHandle == desc => CloseHandleError::InvalidHandle,
         _ => CloseHandleError::Unknown(rc.into()),
     })
+}
+
+bitflags! {
+    /// Memory permissions for transfer memory operations
+    ///
+    /// Only a subset of memory permissions are valid for transfer memory:
+    /// - NONE: No permissions
+    /// - R: Read permission
+    /// - RW: Read/write permissions
+    ///
+    /// Other permission combinations (Write-only, Execute, etc.) are rejected
+    /// by the kernel and will result in InvalidPermission errors.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+    #[repr(transparent)]
+    pub struct MemoryPermission: u32 {
+        /// No permissions
+        const NONE = 0;
+        /// Read permission
+        const R = 1 << 0;
+        /// Write permission (used only for RW combination)
+        #[doc(hidden)]
+        const _W = 1 << 1;
+        /// Read/write permissions
+        const RW = Self::R.bits() | Self::_W.bits();
+    }
 }
 
 #[derive(Debug, thiserror::Error)]

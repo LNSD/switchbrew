@@ -14,7 +14,7 @@ use nx_svc::{
     raw::{Handle as RawHandle, INVALID_HANDLE},
 };
 
-use super::sys::{self, Permission};
+use super::sys;
 
 /// Transfer memory object (C-compatible wrapper)
 #[repr(C)]
@@ -47,12 +47,12 @@ unsafe extern "C" fn __nx_tmem_create(t: *mut TransferMemory, size: usize, perm:
         return KernelError::InvalidPointer.to_rc();
     }
 
-    match unsafe { sys::create(size, perm as Permission) } {
+    match unsafe { sys::create(size, sys::Permissions::from_bits_retain(perm)) } {
         Ok(tm) => {
             let tm_ref = unsafe { &mut *t };
             tm_ref.handle = tm.handle().to_raw();
             tm_ref.size = tm.size();
-            tm_ref.perm = tm.perm() as u32;
+            tm_ref.perm = tm.perm().bits();
             tm_ref.map_addr = ptr::null_mut();
             tm_ref.src_addr = tm.src_addr().unwrap_or(ptr::null_mut());
             0
@@ -79,12 +79,12 @@ unsafe extern "C" fn __nx_tmem_create_from_memory(
         return KernelError::InvalidPointer.to_rc();
     }
 
-    match unsafe { sys::create_from_memory(buf, size, perm as Permission) } {
+    match unsafe { sys::create_from_memory(buf, size, sys::Permissions::from_bits_retain(perm)) } {
         Ok(tm) => {
             let tm_ref = unsafe { &mut *t };
             tm_ref.handle = tm.handle().to_raw();
             tm_ref.size = tm.size();
-            tm_ref.perm = tm.perm() as u32;
+            tm_ref.perm = tm.perm().bits();
             tm_ref.map_addr = ptr::null_mut();
             // Per libnx semantics we do not take ownership of the backing buffer.
             tm_ref.src_addr = ptr::null_mut();
@@ -141,7 +141,7 @@ unsafe extern "C" fn __nx_tmem_map(t: *mut TransferMemory) -> u32 {
         sys::TransferMemory::<sys::Unmapped>::from_parts(
             Handle::from_raw(tm_ref.handle),
             tm_ref.size,
-            tm_ref.perm as Permission,
+            sys::Permissions::from_bits_retain(tm_ref.perm),
             src_option,
         )
     };
@@ -178,7 +178,7 @@ unsafe extern "C" fn __nx_tmem_unmap(t: *mut TransferMemory) -> u32 {
         sys::TransferMemory::<sys::Mapped>::from_parts(
             Handle::from_raw(tm_ref.handle),
             tm_ref.size,
-            tm_ref.perm as Permission,
+            sys::Permissions::from_bits_retain(tm_ref.perm),
             src_option,
             addr_nn,
         )
@@ -208,7 +208,7 @@ unsafe extern "C" fn __nx_tmem_close_handle(t: *mut TransferMemory) -> u32 {
         sys::TransferMemory::<sys::Unmapped>::from_parts(
             Handle::from_raw(tm_ref.handle),
             tm_ref.size,
-            tm_ref.perm as Permission,
+            sys::Permissions::from_bits_retain(tm_ref.perm),
             src_option,
         )
     };
@@ -237,12 +237,12 @@ unsafe extern "C" fn __nx_tmem_wait_for_permission(t: *mut TransferMemory, perm:
         sys::TransferMemory::<sys::Unmapped>::from_parts(
             Handle::from_raw(tm_ref.handle),
             tm_ref.size,
-            tm_ref.perm as Permission,
+            sys::Permissions::from_bits_retain(tm_ref.perm),
             src_option,
         )
     };
 
-    match unsafe { sys::wait_for_permission(unmapped, perm as Permission) } {
+    match unsafe { sys::wait_for_permission(unmapped, sys::Permissions::from_bits_retain(perm)) } {
         Ok(_tm) => 0,
         Err(err) => err.reason.to_rc(),
     }
@@ -273,7 +273,7 @@ unsafe extern "C" fn __nx_tmem_close(t: *mut TransferMemory) -> u32 {
         sys::TransferMemory::<sys::Unmapped>::from_parts(
             Handle::from_raw(tm_ref.handle),
             tm_ref.size,
-            tm_ref.perm as Permission,
+            sys::Permissions::from_bits_retain(tm_ref.perm),
             src_option,
         )
     };
