@@ -26,7 +26,7 @@ struct TimeSpec {
 /// This function is declared in `<time.h>`.
 /// Corresponds to libgloss/libsysbase/nanosleep.c
 #[unsafe(no_mangle)]
-unsafe extern "C" fn __nx_sys_thread_newlib_nanosleep(
+unsafe extern "C" fn __nx_sys_thread__libsysbase_nanosleep(
     req: *const TimeSpec,
     rem: *mut TimeSpec,
 ) -> c_int {

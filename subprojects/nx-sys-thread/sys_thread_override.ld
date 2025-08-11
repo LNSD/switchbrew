@@ -31,19 +31,19 @@ threadGetSelf      = __nx_sys_thread_get_self;
 threadTlsGet       = __nx_sys_thread_tls_get;
 threadTlsSet       = __nx_sys_thread_tls_set;
 
-/* libc (newlib) */
-EXTERN(__nx_sys_thread_newlib_sleep)
-EXTERN(__nx_sys_thread_newlib_usleep)
-EXTERN(__nx_sys_thread_newlib_nanosleep)
-EXTERN(__nx_sys_thread_newlib_pthread_setspecific)
-EXTERN(__nx_sys_thread_newlib_pthread_getspecific)
-EXTERN(__nx_sys_thread_newlib_sched_yield)
-EXTERN(__nx_sys_thread_newlib_sched_getcpu)
+/* libc (newlib - libsysbase) */
+EXTERN(__nx_sys_thread__libsysbase_sleep)
+EXTERN(__nx_sys_thread__libsysbase_usleep)
+EXTERN(__nx_sys_thread__libsysbase_nanosleep)
+EXTERN(__nx_sys_thread__libsysbase_pthread_setspecific)
+EXTERN(__nx_sys_thread__libsysbase_pthread_getspecific)
+EXTERN(__nx_sys_thread__libsysbase_sched_yield)
+EXTERN(__nx_sys_thread__libsysbase_sched_getcpu)
 
-sleep               = __nx_sys_thread_newlib_sleep;
-usleep              = __nx_sys_thread_newlib_usleep;
-nanosleep           = __nx_sys_thread_newlib_nanosleep;
-pthread_setspecific = __nx_sys_thread_newlib_pthread_setspecific;
-pthread_getspecific = __nx_sys_thread_newlib_pthread_getspecific;
-sched_yield         = __nx_sys_thread_newlib_sched_yield;
-sched_getcpu        = __nx_sys_thread_newlib_sched_getcpu;
+sleep               = __nx_sys_thread__libsysbase_sleep;
+usleep              = __nx_sys_thread__libsysbase_usleep;
+nanosleep           = __nx_sys_thread__libsysbase_nanosleep;
+pthread_setspecific = __nx_sys_thread__libsysbase_pthread_setspecific;
+pthread_getspecific = __nx_sys_thread__libsysbase_pthread_getspecific;
+sched_yield         = __nx_sys_thread__libsysbase_sched_yield;
+sched_getcpu        = __nx_sys_thread__libsysbase_sched_getcpu;
