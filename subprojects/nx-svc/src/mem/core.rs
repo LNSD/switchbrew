@@ -1,4 +1,4 @@
-use core::{ffi::c_void, ptr};
+use core::{ffi::c_void, ptr, ptr::NonNull};
 
 use bitflags::bitflags;
 
@@ -208,11 +208,11 @@ impl ToRawResultCode for QueryMemoryError {
 ///
 /// Returns `Ok(())` if the memory was successfully mapped, or a [`MapMemoryError`] on failure.
 pub fn map_memory(
-    dst_addr: *mut c_void,
-    src_addr: *mut c_void,
+    dst: NonNull<c_void>,
+    src: NonNull<c_void>,
     size: usize,
 ) -> Result<(), MapMemoryError> {
-    let rc = unsafe { raw::map_memory(dst_addr, src_addr, size) };
+    let rc = unsafe { raw::map_memory(dst.as_ptr(), src.as_ptr(), size) };
     RawResult::from_raw(rc).map((), |rc| match rc.description() {
         desc if KError::InvalidAddress == desc => MapMemoryError::InvalidAddress,
         desc if KError::InvalidSize == desc => MapMemoryError::InvalidSize,
@@ -286,11 +286,11 @@ impl ToRawResultCode for MapMemoryError {
 ///
 /// Returns `Ok(())` if the memory was successfully unmapped, or a [`UnmapMemoryError`] on failure.
 pub fn unmap_memory(
-    dst_addr: *mut c_void,
-    src_addr: *mut c_void,
+    dst: NonNull<c_void>,
+    src: NonNull<c_void>,
     size: usize,
 ) -> Result<(), UnmapMemoryError> {
-    let rc = unsafe { raw::unmap_memory(dst_addr, src_addr, size) };
+    let rc = unsafe { raw::unmap_memory(dst.as_ptr(), src.as_ptr(), size) };
     RawResult::from_raw(rc).map((), |rc| match rc.description() {
         desc if KError::InvalidHandle == desc => UnmapMemoryError::InvalidHandle,
         desc if KError::InvalidAddress == desc => UnmapMemoryError::InvalidAddress,

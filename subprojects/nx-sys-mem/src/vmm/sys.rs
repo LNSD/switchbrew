@@ -337,8 +337,8 @@ fn init_state() -> VirtmemState {
 
             // Try to unmap memory to detect kernel bitness
             let res = nx_svc::mem::unmap_memory(
-                0xFFFFFFFFFFFFE000usize as *mut _,
-                0xFFFFFE000usize as *mut _,
+                unsafe { NonNull::new_unchecked(0xFFFFFFFFFFFFE000usize as *mut _) },
+                unsafe { NonNull::new_unchecked(0xFFFFFE000usize as *mut _) },
                 0x1000,
             );
             let (aslr, stack) = match res {
