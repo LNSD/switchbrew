@@ -13,9 +13,9 @@
 //!     [`nx_svc::mem::shmem`], drastically reducing the amount of `unsafe`
 //!     scattered throughout the code-base.
 //! 2.  Virtual-address allocation is handled by the cross-crate virtual memory
-//!     manager [`vmm`](crate::vmm). The classic `virtmemLock()` /
+//!     manager [`vmm`]. The classic `virtmemLock()` /
 //!     `virtmemUnlock()` pair is therefore expressed with the RAII guard
-//!     returned by [`vmm::lock`](crate::vmm::sys::lock).
+//!     returned by [`vmm::lock`].
 //! 3.  Instead of a single mutable C struct, the state of a shared-memory
 //!     object is encoded in the type system via the zero-cost phantom-type
 //!     wrapper [`SharedMemory<S>`], where the type parameter captures whether
@@ -29,7 +29,7 @@ use nx_svc::mem::shmem::{
     self as svc, Handle, LocalShmemPermission, MemoryPermission, RemoteShmemPermission,
 };
 
-use crate::vmm::sys as vmm;
+use crate::vmm;
 
 /// Size of the guard region for shared memory mappings (4 KiB).
 ///

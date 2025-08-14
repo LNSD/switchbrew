@@ -3,4 +3,6 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-pub mod sys;
+mod sys;
+
+pub use sys::*;

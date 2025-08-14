@@ -12,9 +12,9 @@
 //!     `TransferMemory<S>` wrapper (where `S` is one of [`Unmapped`] or
 //!     [`Mapped`]).  This prevents common misuse such as double-mapping or
 //!     closing a handle while still mapped.
-//! 3.  Virtual-memory management is delegated to `crate::vmm::sys`, so explicit
+//! 3.  Virtual-memory management is delegated to [`vmm`], so explicit
 //!     `virtmemLock()`/`virtmemUnlock()` calls are replaced by the RAII guard
-//!     returned from [`crate::vmm::sys::lock`].
+//!     returned from [`vmm::lock`].
 //!
 //! Only the low-level kernel resources are managed here; the C-compatible FFI
 //! layer (`crate::tmem::ffi`) is a thin shim translating between the C structs
@@ -31,7 +31,7 @@ use nx_svc::{
     thread,
 };
 
-use crate::vmm::sys as vmm;
+use crate::vmm;
 
 /// Guard region size (0x1000), per libnx.
 const GUARD_SIZE: usize = 0x1000;

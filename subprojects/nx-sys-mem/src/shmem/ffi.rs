@@ -199,7 +199,7 @@ unsafe extern "C" fn __nx_shmem_close(s: *mut SharedMemory) -> u32 {
     };
     match unsafe { sys::close(unmapped) } {
         Ok(()) => {
-            let mut sm = unsafe { s.as_mut() };
+            let sm = unsafe { s.as_mut() };
 
             // Clear the handle to prevent double-close.
             sm.handle = INVALID_HANDLE;

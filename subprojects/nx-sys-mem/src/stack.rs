@@ -22,7 +22,7 @@ use core::{ffi::c_void, ptr::NonNull};
 
 use nx_svc::mem::core as svc;
 
-use super::{buf::Buf, vmm::sys as vmm};
+use crate::{buf::Buf, vmm};
 
 /// Size of the guard region for stack overflow protection (16 KiB).
 ///
