@@ -51,58 +51,16 @@ use super::{buf::Buf, vmm::sys as vmm};
 /// to ensure compatibility with existing Horizon OS applications and libraries.
 const GUARD_SIZE: usize = 0x4000;
 
-/// Represents stack memory that has been allocated but not yet mapped into the process address space.
-///
-/// This is the initial state of stack memory after allocation. The memory exists but is not
-/// accessible until it is mapped using the [`map`] function.
-#[derive(Debug)]
-pub struct UnmappedStackMemory<B> {
-    buffer: B,
-}
-
-impl<B> UnmappedStackMemory<B>
-where
-    B: Buf,
-{
-    /// Create a new `UnmappedStackMemory` with the given buffer.
-    pub fn new(buffer: B) -> Self {
-        Self { buffer }
-    }
-}
-
-/// Represents stack memory that has been mapped into the process address space.
-///
-/// This structure holds both the underlying memory buffer and the virtual address where
-/// the stack memory has been mapped. The mapped memory can be accessed through the
-/// `mapped_mem_ptr` pointer.
-///
-/// When dropped or explicitly unmapped using [`unmap`], the memory will be unmapped
-/// from the process address space.
-#[derive(Debug)]
-pub struct MappedStackMemory<B> {
-    buffer: B,
-    mapped_mem_ptr: NonNull<c_void>,
-}
-
-impl<B> MappedStackMemory<B> {
-    /// Returns the pointer to the mapped memory.
-    pub fn mapped_mem_ptr(&self) -> NonNull<c_void> {
-        self.mapped_mem_ptr
-    }
-}
-
 /// Map the [`UnmappedStackMemory`] instance into the current process.
 ///
 /// # Safety
 ///
 /// This function is unsafe because it interacts with the kernel directly,
 /// which is inherently unsafe.
-pub unsafe fn map<B>(sm: UnmappedStackMemory<B>) -> Result<MappedStackMemory<B>, MapError>
+pub unsafe fn map<B>(buffer: B) -> Result<MappedStackMemory<B>, MapError>
 where
     B: Buf,
 {
-    let UnmappedStackMemory { buffer } = sm;
-
     // Lock the VMM and reserve a virtual address range for the stack memory.
     let Some(ptr) = vmm::lock().find_stack(buffer.size(), GUARD_SIZE) else {
         return Err(MapError::VirtAddrAllocFailed);
@@ -138,7 +96,7 @@ pub enum MapError {
 ///
 /// This function is unsafe because it interacts with the kernel directly,
 /// which is inherently unsafe.
-pub unsafe fn unmap<B>(sm: MappedStackMemory<B>) -> Result<UnmappedStackMemory<B>, UnmapError>
+pub unsafe fn unmap<B>(sm: MappedStackMemory<B>) -> Result<B, UnmapError>
 where
     B: Buf,
 {
@@ -150,7 +108,7 @@ where
     // Ensure the memory is properly unmapped from the process address space.
     svc::unmap_memory(mapped_mem_ptr, buffer.ptr(), buffer.size()).map_err(UnmapError::Svc)?;
 
-    Ok(UnmappedStackMemory { buffer })
+    Ok(buffer)
 }
 
 /// Errors that can occur when unmapping stack memory.
@@ -159,4 +117,25 @@ pub enum UnmapError {
     /// System call to unmap memory failed.
     #[error(transparent)]
     Svc(#[from] svc::UnmapMemoryError),
+}
+
+/// Represents stack memory that has been mapped into the process address space.
+///
+/// This structure holds both the underlying memory buffer and the virtual address where
+/// the stack memory has been mapped. The mapped memory can be accessed through the
+/// `mapped_mem_ptr` pointer.
+///
+/// When dropped or explicitly unmapped using [`unmap`], the memory will be unmapped
+/// from the process address space.
+#[derive(Debug)]
+pub struct MappedStackMemory<B> {
+    buffer: B,
+    mapped_mem_ptr: NonNull<c_void>,
+}
+
+impl<B> MappedStackMemory<B> {
+    /// Returns the pointer to the mapped memory.
+    pub fn mapped_mem_ptr(&self) -> NonNull<c_void> {
+        self.mapped_mem_ptr
+    }
 }
