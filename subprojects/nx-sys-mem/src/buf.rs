@@ -16,17 +16,6 @@
 //! All buffers allocated through this module are aligned to page boundaries (4 KiB).
 //! This alignment is required for certain system operations and helps improve
 //! performance for memory-mapped operations.
-//!
-//! # Example
-//!
-//! ```no_run
-//! use nx_sys_mem::buf::PageAlignedBuffer;
-//!
-//! // Allocate a 16 KiB page-aligned buffer
-//! let buffer = PageAlignedBuffer::alloc(0x4000).unwrap();
-//!
-//! // The buffer automatically deallocates when dropped
-//! ```
 
 use alloc::alloc::{alloc_zeroed, dealloc};
 use core::{alloc::Layout, ffi::c_void, ptr::NonNull};

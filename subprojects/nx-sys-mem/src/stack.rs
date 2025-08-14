@@ -7,7 +7,8 @@
 //! # Overview
 //!
 //! Stack memory management on Horizon OS involves several steps:
-//! 1. **Allocation**: Create or provide a memory buffer implementing the [`Buf`](crate::buf::Buf) trait (e.g., [`PageAlignedBuffer`](crate::buf::PageAlignedBuffer))
+//! 1. **Allocation**: Create or provide a memory buffer implementing the [`Buf`] trait (e.g.,
+//! [`PageAlignedBuffer`](crate::buf::PageAlignedBuffer))
 //! 2. **Mapping**: Map the memory into the process address space with [`map`]
 //! 3. **Usage**: Use the mapped memory as thread stack
 //! 4. **Unmapping**: Unmap the memory when done with [`unmap`]
@@ -55,7 +56,7 @@ const GUARD_SIZE: usize = 0x4000;
 /// This is the initial state of stack memory after allocation. The memory exists but is not
 /// accessible until it is mapped using the [`map`] function.
 #[derive(Debug)]
-pub struct UnmappedStackMemory<B: Buf> {
+pub struct UnmappedStackMemory<B> {
     buffer: B,
 }
 
@@ -78,15 +79,12 @@ where
 /// When dropped or explicitly unmapped using [`unmap`], the memory will be unmapped
 /// from the process address space.
 #[derive(Debug)]
-pub struct MappedStackMemory<B: Buf> {
+pub struct MappedStackMemory<B> {
     buffer: B,
     mapped_mem_ptr: NonNull<c_void>,
 }
 
-impl<B> MappedStackMemory<B>
-where
-    B: Buf,
-{
+impl<B> MappedStackMemory<B> {
     /// Returns the pointer to the mapped memory.
     pub fn mapped_mem_ptr(&self) -> NonNull<c_void> {
         self.mapped_mem_ptr
