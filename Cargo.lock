@@ -105,7 +105,6 @@ dependencies = [
  "nx-rand",
  "nx-std-sync",
  "nx-svc",
- "static_assertions",
  "thiserror",
 ]
 
